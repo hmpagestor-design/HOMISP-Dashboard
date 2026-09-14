@@ -171,7 +171,7 @@ function displayLabel(item) {
 function renderKpis() {
   const isFiltered = Boolean(data.meta?.isFiltered);
   const kpis = [
-    ["Sem CPF", data.kpis.pacientesSemCpf || 0, "CPF tecnico", "#7c3aed"],
+    ["Sem CPF", data.kpis.pacientesSemCpf || 0, "CPF técnico", "#7c3aed"],
     ["Pacientes", data.kpis.totalPacientes, "CPFs únicos", "#2166d1"],
     ["Atuais", data.kpis.pacientesAtuais, isFiltered ? "No período" : "Em atendimento", "#0f8a83"],
     ["Gargalo atual", data.kpis.gargaloAtualLabel || "Sem gargalo", data.kpis.gargaloAtualTempoLabel || "0 min", "#8b5cf6"],
@@ -219,13 +219,13 @@ function renderLeadRanking() {
     .sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
 
   if (!items.length) {
-    container.append(el("div", "empty-state", "Sem tempo medio calculado para o periodo."));
+    container.append(el("div", "empty-state", "Sem tempo médio calculado para o período."));
     return;
   }
 
   const table = el("div", "lead-table");
   const header = el("div", "lead-table-row lead-table-head");
-  header.append(el("span", "", "Etapa"), el("span", "", "Tempo medio"), el("span", "", "Atuais"));
+  header.append(el("span", "", "Etapa"), el("span", "", "Tempo médio"), el("span", "", "Atuais"));
   table.append(header);
 
   items.forEach((item) => {
