@@ -1,0 +1,226 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jornada do Paciente | MISP CearÃ¡-Mirim</title>
+    <link rel="stylesheet" href="./styles.css?v=20260904-3" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <img src="./assets/logo-misp.png" alt="MISP UFRN" class="logo logo-misp" />
+          <div>
+            <p class="eyebrow">MISP UFRN</p>
+            <h1>Jornada do Paciente</h1>
+          </div>
+        </div>
+        <img
+          src="./assets/logo-ceara-mirim.png"
+          alt="Prefeitura Municipal de CearÃ¡-Mirim"
+          class="logo logo-city"
+        />
+      </header>
+
+      <main>
+        <section class="summary-grid" id="kpiGrid" aria-label="Indicadores gerais"></section>
+
+        <div class="controls-row">
+          <nav class="view-tabs" aria-label="VisÃµes do dashboard">
+            <button class="tab-button is-active" data-target="operacional">Operacional</button>
+            <button class="tab-button" data-target="demografico">DemogrÃ¡fico</button>
+            <button class="tab-button" data-target="setores">Quantidade setor</button>
+            <button class="tab-button" data-target="qualidade">Qualidade</button>
+          </nav>
+          <form class="date-filter" id="dateFilter" aria-label="Filtro de data">
+            <span class="date-filter-title">PerÃ­odo</span>
+            <label>
+              <span>InÃ­cio</span>
+              <input type="date" id="dateFrom" />
+            </label>
+            <label>
+              <span>Fim</span>
+              <input type="date" id="dateTo" />
+            </label>
+            <button type="submit">Aplicar</button>
+            <button type="button" id="clearDateFilter">Limpar</button>
+          </form>
+          <div class="refresh-status" id="refreshStatus" aria-live="polite">
+            <span class="status-dot"></span>
+            <span id="refreshText">Snapshot local</span>
+          </div>
+        </div>
+
+        <section class="view-panel is-active" id="operacional">
+          <div class="dashboard-grid operational-grid">
+            <article class="panel span-8">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Tempo mÃ©dio</p>
+                  <h2>Lead time por etapa</h2>
+                </div>
+                <span class="metric-chip" id="leadChip"></span>
+              </div>
+              <div id="leadByStepChart" class="lead-ranking"></div>
+            </article>
+
+            <article class="panel span-4">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Fluxo</p>
+                  <h2>Resolutividade</h2>
+                </div>
+              </div>
+              <div class="gauge-wrap">
+                <div class="gauge" id="resolutionGauge"></div>
+                <div>
+                  <strong id="resolutionLabel"></strong>
+                <span>altas sobre altas + transferÃªncias</span>
+                </div>
+              </div>
+              <div class="mini-stat-row">
+                <div>
+                  <span>Permanencia media</span>
+                  <strong id="permanenceLabel"></strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel span-12 priority-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Triagem</p>
+                  <h2>Em jornada por prioridade</h2>
+                </div>
+              </div>
+              <div id="gravityGrid" class="gravity-grid"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view-panel" id="demografico">
+          <div class="dashboard-grid demographic-grid">
+            <article class="panel span-3">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Perfil</p>
+                  <h2>Sexo</h2>
+                </div>
+              </div>
+              <div id="sexDonut" class="donut-layout"></div>
+            </article>
+
+            <article class="panel span-3">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Perfil</p>
+                  <h2>Faixa assistencial</h2>
+                </div>
+              </div>
+              <div id="ageDonut" class="donut-layout"></div>
+            </article>
+
+            <article class="panel span-3 demographic-kpi-card">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">MÃ©dia</p>
+                  <h2>Pacientes por dia</h2>
+                </div>
+              </div>
+              <div class="daily-average" id="dailyAverageCard">
+                <strong id="dailyAverageLabel">0,0</strong>
+                <span id="dailyAverageCaption">MÃ©dia no perÃ­odo exibido</span>
+              </div>
+            </article>
+
+            <article class="panel span-3">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">30 dias</p>
+                  <h2>Reingresso</h2>
+                </div>
+              </div>
+              <div class="big-number" id="readmissionLabel"></div>
+              <p class="muted">Baseado em repetiÃ§Ã£o de CPF com nova entrada em atÃ© 30 dias.</p>
+            </article>
+
+            <article class="panel span-6">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Origem</p>
+                  <h2>Pacientes por cidade</h2>
+                </div>
+              </div>
+              <div id="cityChart" class="bar-chart compact"></div>
+            </article>
+
+            <article class="panel span-6">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Entrada</p>
+                  <h2>Entradas ao longo do tempo</h2>
+                </div>
+              </div>
+              <div id="entriesChart" class="line-chart"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view-panel" id="setores">
+          <div class="dashboard-grid">
+            <article class="panel span-12">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Ãšltima etapa registrada</p>
+                  <h2 id="sectorTitle">Pacientes atuais por setor</h2>
+                </div>
+                <span class="metric-chip" id="activeChip"></span>
+              </div>
+              <div id="sectorTreemap" class="sector-grid"></div>
+            </article>
+
+            <article class="panel span-12 outcome-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Encerramento</p>
+                  <h2>Desfechos da jornada</h2>
+                </div>
+              </div>
+              <div id="outcomeGrid" class="outcome-grid"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view-panel" id="qualidade">
+          <div class="dashboard-grid">
+            <article class="panel span-7">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Tratamentos aplicados</p>
+                  <h2>ConsistÃªncia app, Sheets e BI</h2>
+                </div>
+              </div>
+              <div id="qualityList" class="quality-list"></div>
+            </article>
+
+            <article class="panel span-5">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Modelo</p>
+                  <h2>Integridade</h2>
+                </div>
+              </div>
+              <div id="integrityGrid" class="integrity-grid"></div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./dashboard-data.js?v=20260904-4"></script>
+    <script src="./dashboard-config.js?v=20260914-1"></script>
+    <script src="./app.js?v=20260914-1"></script>
+  </body>
+</html>
+
