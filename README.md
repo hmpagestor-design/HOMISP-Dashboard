@@ -1,4 +1,4 @@
-﻿# Dashboard externo HOMISP
+# Dashboard externo HOMISP
 
 Arquivos prontos para GitHub Pages.
 

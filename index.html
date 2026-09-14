@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jornada do Paciente | MISP CearÃ¡-Mirim</title>
+    <title>Jornada do Paciente | MISP Ceará-Mirim</title>
     <link rel="stylesheet" href="./styles.css?v=20260904-3" />
   </head>
   <body>
@@ -18,7 +18,7 @@
         </div>
         <img
           src="./assets/logo-ceara-mirim.png"
-          alt="Prefeitura Municipal de CearÃ¡-Mirim"
+          alt="Prefeitura Municipal de Ceará-Mirim"
           class="logo logo-city"
         />
       </header>
@@ -27,16 +27,16 @@
         <section class="summary-grid" id="kpiGrid" aria-label="Indicadores gerais"></section>
 
         <div class="controls-row">
-          <nav class="view-tabs" aria-label="VisÃµes do dashboard">
+          <nav class="view-tabs" aria-label="Visões do dashboard">
             <button class="tab-button is-active" data-target="operacional">Operacional</button>
-            <button class="tab-button" data-target="demografico">DemogrÃ¡fico</button>
+            <button class="tab-button" data-target="demografico">Demográfico</button>
             <button class="tab-button" data-target="setores">Quantidade setor</button>
             <button class="tab-button" data-target="qualidade">Qualidade</button>
           </nav>
           <form class="date-filter" id="dateFilter" aria-label="Filtro de data">
-            <span class="date-filter-title">PerÃ­odo</span>
+            <span class="date-filter-title">Período</span>
             <label>
-              <span>InÃ­cio</span>
+              <span>Início</span>
               <input type="date" id="dateFrom" />
             </label>
             <label>
@@ -57,7 +57,7 @@
             <article class="panel span-8">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Tempo mÃ©dio</p>
+                  <p class="eyebrow">Tempo médio</p>
                   <h2>Lead time por etapa</h2>
                 </div>
                 <span class="metric-chip" id="leadChip"></span>
@@ -76,7 +76,7 @@
                 <div class="gauge" id="resolutionGauge"></div>
                 <div>
                   <strong id="resolutionLabel"></strong>
-                <span>altas sobre altas + transferÃªncias</span>
+                <span>altas sobre altas + transferências</span>
                 </div>
               </div>
               <div class="mini-stat-row">
@@ -124,13 +124,13 @@
             <article class="panel span-3 demographic-kpi-card">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">MÃ©dia</p>
+                  <p class="eyebrow">Média</p>
                   <h2>Pacientes por dia</h2>
                 </div>
               </div>
               <div class="daily-average" id="dailyAverageCard">
                 <strong id="dailyAverageLabel">0,0</strong>
-                <span id="dailyAverageCaption">MÃ©dia no perÃ­odo exibido</span>
+                <span id="dailyAverageCaption">Média no período exibido</span>
               </div>
             </article>
 
@@ -142,7 +142,7 @@
                 </div>
               </div>
               <div class="big-number" id="readmissionLabel"></div>
-              <p class="muted">Baseado em repetiÃ§Ã£o de CPF com nova entrada em atÃ© 30 dias.</p>
+              <p class="muted">Baseado em repetição de CPF com nova entrada em até 30 dias.</p>
             </article>
 
             <article class="panel span-6">
@@ -172,7 +172,7 @@
             <article class="panel span-12">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Ãšltima etapa registrada</p>
+                  <p class="eyebrow">Última etapa registrada</p>
                   <h2 id="sectorTitle">Pacientes atuais por setor</h2>
                 </div>
                 <span class="metric-chip" id="activeChip"></span>
@@ -198,7 +198,7 @@
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Tratamentos aplicados</p>
-                  <h2>ConsistÃªncia app, Sheets e BI</h2>
+                  <h2>Consistência app, Sheets e BI</h2>
                 </div>
               </div>
               <div id="qualityList" class="quality-list"></div>
@@ -223,4 +223,3 @@
     <script src="./app.js?v=20260914-1"></script>
   </body>
 </html>
-
