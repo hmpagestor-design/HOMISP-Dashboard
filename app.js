@@ -120,7 +120,7 @@ function loadJsonp(url) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("Tempo limite ao carregar dados externos"));
-    }, 45000);
+    }, 25000);
 
     function cleanup() {
       window.clearTimeout(timeout);
@@ -141,6 +141,21 @@ function loadJsonp(url) {
     };
     document.head.append(script);
   });
+}
+
+async function requestDashboardDataWithRetry(maxAttempts = 2) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await requestDashboardData();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1200));
+      }
+    }
+  }
+  throw lastError || new Error("Falha ao atualizar o dashboard");
 }
 
 async function requestDashboardData(extra = {}) {
@@ -508,7 +523,7 @@ async function refreshDashboard() {
   refreshInFlight = true;
   if (publicApiUrl) setRefreshStatus("snapshot", "Atualizando dados...");
   try {
-    const nextData = await requestDashboardData();
+    const nextData = await requestDashboardDataWithRetry();
     renderDashboard(nextData);
     const updatedAt = formatClock(nextData.generatedAt);
     setRefreshStatus("live", `Atualizado ${updatedAt}`);
