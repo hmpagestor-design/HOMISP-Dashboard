@@ -1,5 +1,6 @@
 let data = window.HOMISP_DASHBOARD_DATA;
 let refreshTimer = null;
+let refreshInFlight = false;
 
 const refreshIntervalMs = 30000;
 const isDevMode = new URLSearchParams(window.location.search).get("dev") === "1";
@@ -119,7 +120,7 @@ function loadJsonp(url) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("Tempo limite ao carregar dados externos"));
-    }, 20000);
+    }, 45000);
 
     function cleanup() {
       window.clearTimeout(timeout);
@@ -503,6 +504,8 @@ function renderDashboard(nextData = data) {
 }
 
 async function refreshDashboard() {
+  if (refreshInFlight) return;
+  refreshInFlight = true;
   try {
     const nextData = await requestDashboardData();
     renderDashboard(nextData);
@@ -510,6 +513,8 @@ async function refreshDashboard() {
     setRefreshStatus("live", `Atualizado ${updatedAt}`);
   } catch (error) {
     setRefreshStatus("error", "Usando snapshot local");
+  } finally {
+    refreshInFlight = false;
   }
 }
 
