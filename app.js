@@ -529,8 +529,17 @@ function setupDateFilter() {
   const clearButton = qs("#clearDateFilter");
   if (!form || !dateFrom || !dateTo || !clearButton) return;
 
-  dateFrom.value = initialParams.get("date_from") || "";
-  dateTo.value = initialParams.get("date_to") || "";
+  const today = new Date();
+  const todayValue = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+  const hasDateParams = initialParams.has("date_from") || initialParams.has("date_to");
+
+  dateFrom.value = hasDateParams ? initialParams.get("date_from") || "" : todayValue;
+  dateTo.value = hasDateParams ? initialParams.get("date_to") || "" : todayValue;
+  if (!hasDateParams) updateFilterUrl();
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
