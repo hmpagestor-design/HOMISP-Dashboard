@@ -506,13 +506,17 @@ function renderDashboard(nextData = data) {
 async function refreshDashboard() {
   if (refreshInFlight) return;
   refreshInFlight = true;
+  if (publicApiUrl) setRefreshStatus("snapshot", "Atualizando dados...");
   try {
     const nextData = await requestDashboardData();
     renderDashboard(nextData);
     const updatedAt = formatClock(nextData.generatedAt);
     setRefreshStatus("live", `Atualizado ${updatedAt}`);
   } catch (error) {
-    setRefreshStatus("error", "Usando snapshot local");
+    setRefreshStatus(
+      "error",
+      publicApiUrl ? "Falha ao atualizar; nova tentativa automática" : "Usando snapshot local",
+    );
   } finally {
     refreshInFlight = false;
   }
@@ -568,6 +572,7 @@ function init() {
   setupDateFilter();
   if (data) renderDashboard(data);
   else setRefreshStatus("snapshot", "Carregando dados");
+  if (publicApiUrl) setRefreshStatus("snapshot", "Atualizando dados...");
   setupTabs();
   startAutoRefresh();
 }
