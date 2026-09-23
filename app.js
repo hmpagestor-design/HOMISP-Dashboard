@@ -174,7 +174,7 @@ function renderKpis() {
   const kpis = [
     ["Sem CPF", data.kpis.pacientesSemCpf || 0, "CPF técnico", "#7c3aed"],
     ["Pacientes", data.kpis.totalPacientes, "CPFs únicos", "#2166d1"],
-    ["Atuais", data.kpis.pacientesAtuais, isFiltered ? "No período" : "Em atendimento", "#0f8a83"],
+    ["Atuais", data.kpis.pacientesAtuais, "Em atendimento", "#0f8a83"],
     ["Gargalo atual", data.kpis.gargaloAtualLabel || "Sem gargalo", data.kpis.gargaloAtualTempoLabel || "0 min", "#8b5cf6"],
     ["Permanência", data.kpis.permanenciaMediaLabel, "Média até saída", "#1a8f45"],
     ["Reingresso", data.kpis.taxaReingressoLabel, "Retorno em 30 dias", "#c93333"],
@@ -403,7 +403,7 @@ function renderQuality() {
     ],
     [
       "Pacientes atuais",
-      "A contagem considera somente a última movimentação de cada paciente. Alta hospitalar, óbito e transferência saem da grade de setores e entram em desfechos.",
+      "A contagem considera jornadas iniciadas a partir de 23/09/2026: boletins valem por 24 horas, pacientes em internação permanecem ativos, e alta hospitalar, óbito ou transferência encerram a jornada.",
     ],
     [
       "Permanência",
