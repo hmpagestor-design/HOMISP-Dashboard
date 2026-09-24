@@ -1,5 +1,5 @@
 window.HOMISP_DASHBOARD_DATA = {
-  "generatedAt": "2026-09-23T10:59:06",
+  "generatedAt": "2026-09-24T08:23:32",
   "source": {
     "sheetId": "1eXlFlYblp2GOmqQbfwrQ7jA5UD8Us7KEScU7LpfX6FQ"
   },
@@ -10,44 +10,46 @@ window.HOMISP_DASHBOARD_DATA = {
       "dateFrom": "",
       "dateTo": ""
     },
-    "isFiltered": false
+    "isFiltered": false,
+    "isSingleDay": false
   },
   "notes": [
     "Etapas normalizadas com lower-case, underscore e remocao geral de acentos.",
     "Saidas finais tratadas como alta_hospitalar, obito e transferencia.",
     "Pacientes atuais consideram boletins validos a partir de 23/09/2026 por ate 24 horas; internados permanecem ate um desfecho final.",
+    "Quando o filtro cobre um unico dia, os cards operacionais mostram somente as jornadas iniciadas naquele dia.",
     "Perfil demografico e total de pacientes deduplicados por CPF normalizado.",
     "Dados pessoais de pacientes nao foram exportados para este dashboard."
   ],
   "kpis": {
-    "totalPacientes": 7337,
-    "pacientesSemCpf": 599,
-    "totalAtendimentos": 10698,
-    "pacientesAtuais": 109,
-    "registros": 15835,
-    "gravidades": 3118,
-    "resolutividade": 0,
-    "resolutividadeLabel": "0%",
-    "mediaLeadMinutos": 33.9,
+    "totalPacientes": 7462,
+    "pacientesSemCpf": 606,
+    "totalAtendimentos": 10907,
+    "pacientesAtuais": 263,
+    "registros": 16112,
+    "gravidades": 3184,
+    "resolutividade": 1.0,
+    "resolutividadeLabel": "100%",
+    "mediaLeadMinutos": 33.7,
     "mediaLeadLabel": "00:34",
     "gargaloAtual": "enfermagem",
     "gargaloAtualLabel": "Enfermagem",
     "gargaloAtualTempo": 66.6,
     "gargaloAtualTempoLabel": "66.6 min",
-    "permanenciaMediaMinutos": 0,
-    "permanenciaMediaLabel": "00:00",
-    "taxaReingresso": 0.2686,
-    "taxaReingressoLabel": "26.9%",
-    "mediaPacientesDia": 248.7,
-    "mediaPacientesDiaLabel": "248,7",
-    "diasComEntrada": 43
+    "permanenciaMediaMinutos": 99.8,
+    "permanenciaMediaLabel": "01:40",
+    "taxaReingresso": 0.2702,
+    "taxaReingressoLabel": "27.0%",
+    "mediaPacientesDia": 247.8,
+    "mediaPacientesDiaLabel": "247,8",
+    "diasComEntrada": 44
   },
   "sectors": [
     {
       "id": "recepcao_adulto",
       "label": "Aguardando triagem adulto",
-      "current": 67,
-      "visits": 10664,
+      "current": 161,
+      "visits": 10873,
       "avgLeadMinutes": 0.0,
       "totalLeadMinutes": 0,
       "isFinal": false
@@ -64,10 +66,10 @@ window.HOMISP_DASHBOARD_DATA = {
     {
       "id": "triagem_adulto",
       "label": "Triagem adulto",
-      "current": 39,
-      "visits": 3120,
+      "current": 101,
+      "visits": 3186,
       "avgLeadMinutes": 17.3,
-      "totalLeadMinutes": 54002,
+      "totalLeadMinutes": 55153,
       "isFinal": false
     },
     {
@@ -82,10 +84,10 @@ window.HOMISP_DASHBOARD_DATA = {
     {
       "id": "consultorio_adulto_1",
       "label": "Consultório adulto 1",
-      "current": 0,
-      "visits": 507,
+      "current": 1,
+      "visits": 508,
       "avgLeadMinutes": 49.7,
-      "totalLeadMinutes": 25191,
+      "totalLeadMinutes": 25237,
       "isFinal": false
     },
     {
@@ -100,7 +102,7 @@ window.HOMISP_DASHBOARD_DATA = {
     {
       "id": "consultorio_adulto_3",
       "label": "Consultório adulto 3",
-      "current": 3,
+      "current": 0,
       "visits": 778,
       "avgLeadMinutes": 58.2,
       "totalLeadMinutes": 45244,
@@ -164,7 +166,7 @@ window.HOMISP_DASHBOARD_DATA = {
       "id": "alta_hospitalar",
       "label": "Alta hospitalar",
       "current": 0,
-      "visits": 0,
+      "visits": 1,
       "avgLeadMinutes": 0.0,
       "totalLeadMinutes": 0,
       "isFinal": true
@@ -174,11 +176,11 @@ window.HOMISP_DASHBOARD_DATA = {
     "sex": [
       {
         "label": "Feminino",
-        "value": 4166
+        "value": 4245
       },
       {
         "label": "Masculino",
-        "value": 3163
+        "value": 3209
       },
       {
         "label": "Não informado",
@@ -188,7 +190,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "ageClass": [
       {
         "label": "Adulto",
-        "value": 7331
+        "value": 7456
       },
       {
         "label": "Infantil",
@@ -198,11 +200,11 @@ window.HOMISP_DASHBOARD_DATA = {
     "cities": [
       {
         "label": "Ceará-Mirim",
-        "value": 7189
+        "value": 7309
       },
       {
         "label": "Natal",
-        "value": 42
+        "value": 44
       },
       {
         "label": "Ielmo Marinho",
@@ -221,11 +223,11 @@ window.HOMISP_DASHBOARD_DATA = {
         "value": 10
       },
       {
-        "label": "São Gonçalo do Amarante",
-        "value": 7
+        "label": "Maxaranguape",
+        "value": 8
       },
       {
-        "label": "Maxaranguape",
+        "label": "São Gonçalo do Amarante",
         "value": 7
       },
       {
@@ -237,11 +239,11 @@ window.HOMISP_DASHBOARD_DATA = {
         "value": 5
       },
       {
-        "label": "Parnamirim",
-        "value": 4
+        "label": "Bento Fernandes",
+        "value": 5
       },
       {
-        "label": "Bento Fernandes",
+        "label": "Parnamirim",
         "value": 4
       }
     ],
@@ -416,7 +418,11 @@ window.HOMISP_DASHBOARD_DATA = {
       },
       {
         "date": "2026-09-23",
-        "value": 109
+        "value": 267
+      },
+      {
+        "date": "2026-09-24",
+        "value": 51
       }
     ],
     "gravity": [
@@ -442,18 +448,18 @@ window.HOMISP_DASHBOARD_DATA = {
         "id": "prioridade_120",
         "label": "Pouco urgente",
         "targetLabel": "120 min",
-        "patients": 15,
-        "totalClassified": 1056,
-        "avgLeadMinutes": 15.9,
+        "patients": 34,
+        "totalClassified": 1075,
+        "avgLeadMinutes": 15.8,
         "avgLeadLabel": "00:16"
       },
       {
         "id": "prioridade_240",
         "label": "Não urgente",
         "targetLabel": "240 min",
-        "patients": 21,
-        "totalClassified": 1246,
-        "avgLeadMinutes": 14.7,
+        "patients": 65,
+        "totalClassified": 1292,
+        "avgLeadMinutes": 14.5,
         "avgLeadLabel": "00:15"
       }
     ],
@@ -461,7 +467,7 @@ window.HOMISP_DASHBOARD_DATA = {
       {
         "id": "alta_hospitalar",
         "label": "Alta hospitalar",
-        "patients": 0
+        "patients": 1
       },
       {
         "id": "transferencia",
@@ -486,22 +492,22 @@ window.HOMISP_DASHBOARD_DATA = {
         "label": "Consultório adulto 3",
         "value": 58.2,
         "id": "consultorio_adulto_3",
-        "current": 3,
+        "current": 0,
         "visits": 778
       },
       {
         "label": "Consultório adulto 1",
         "value": 49.7,
         "id": "consultorio_adulto_1",
-        "current": 0,
-        "visits": 507
+        "current": 1,
+        "visits": 508
       },
       {
         "label": "Triagem adulto",
         "value": 17.3,
         "id": "triagem_adulto",
-        "current": 39,
-        "visits": 3120
+        "current": 101,
+        "visits": 3186
       },
       {
         "label": "Internação",

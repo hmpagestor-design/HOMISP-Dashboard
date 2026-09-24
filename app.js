@@ -186,10 +186,11 @@ function displayLabel(item) {
 
 function renderKpis() {
   const isFiltered = Boolean(data.meta?.isFiltered);
+  const isSingleDay = Boolean(data.meta?.isSingleDay);
   const kpis = [
     ["Sem CPF", data.kpis.pacientesSemCpf || 0, "CPF técnico", "#7c3aed"],
     ["Pacientes", data.kpis.totalPacientes, "CPFs únicos", "#2166d1"],
-    ["Atuais", data.kpis.pacientesAtuais, "Em atendimento", "#0f8a83"],
+    ["Atuais", data.kpis.pacientesAtuais, isSingleDay ? "No dia" : "Em atendimento", "#0f8a83"],
     ["Gargalo atual", data.kpis.gargaloAtualLabel || "Sem gargalo", data.kpis.gargaloAtualTempoLabel || "0 min", "#8b5cf6"],
     ["Permanência", data.kpis.permanenciaMediaLabel, "Média até saída", "#1a8f45"],
     ["Reingresso", data.kpis.taxaReingressoLabel, "Retorno em 30 dias", "#c93333"],
@@ -495,12 +496,17 @@ function formatClock(value) {
 function renderDashboard(nextData = data) {
   data = nextData;
   const isFiltered = Boolean(data.meta?.isFiltered);
+  const isSingleDay = Boolean(data.meta?.isSingleDay);
   renderKpis();
   qs("#leadChip").textContent = `${data.kpis.mediaLeadLabel} médio`;
-  qs("#activeChip").textContent = isFiltered
-    ? `${formatNumber(data.kpis.pacientesAtuais)} no período`
+  qs("#activeChip").textContent = isSingleDay
+    ? `${formatNumber(data.kpis.pacientesAtuais)} no dia`
+    : isFiltered
+      ? `${formatNumber(data.kpis.pacientesAtuais)} pacientes atuais`
     : `${formatNumber(data.kpis.pacientesAtuais)} pacientes atuais`;
-  qs("#sectorTitle").textContent = isFiltered ? "Última etapa registrada no período" : "Pacientes atuais por setor";
+  qs("#sectorTitle").textContent = isSingleDay
+    ? "Situação das jornadas iniciadas no dia"
+    : "Pacientes atuais por setor";
   qs("#resolutionGauge").style.setProperty("--value", `${data.kpis.resolutividade * 100}%`);
   qs("#resolutionLabel").textContent = data.kpis.resolutividadeLabel;
   qs("#permanenceLabel").textContent = data.kpis.permanenciaMediaLabel;
