@@ -359,20 +359,34 @@ function renderGravity() {
   const grid = qs("#gravityGrid");
   grid.innerHTML = "";
   const items = data.charts.gravity || [];
-  const total = items.reduce((sum, item) => sum + (Number(item.patients) || 0), 0);
+  const periodMode = usePeriodTriageTotals();
+  const patientCount = (item) => Number(periodMode ? item.totalClassified : item.patients) || 0;
+  const total = items.reduce((sum, item) => sum + patientCount(item), 0);
   items.forEach((item) => {
-    const share = total ? ((Number(item.patients) || 0) / total) * 100 : 0;
+    const patients = patientCount(item);
+    const share = total ? (patients / total) * 100 : 0;
     const card = el("div", "gravity-card");
     const main = el("div", "gravity-card-main");
     card.style.setProperty("--gravity-color", priorityColors[item.id] || "#64748b");
-    card.setAttribute("aria-label", `${item.label}: ${formatNumber(item.patients)} pacientes, ${formatDecimal(share)}% do total`);
+    card.setAttribute("aria-label", `${item.label}: ${formatNumber(patients)} pacientes, ${formatDecimal(share)}% do total`);
     card.append(el("span", "", `${item.label} ${item.targetLabel || ""}`.trim()));
-    main.append(el("strong", "", formatNumber(item.patients)));
+    main.append(el("strong", "", formatNumber(patients)));
     main.append(el("em", "gravity-share", `${formatDecimal(share)}%`));
     card.append(main);
-    card.append(el("small", "", `${item.avgLeadLabel} médio geral`));
+    card.append(el("small", "", `${item.avgLeadLabel} ${periodMode ? "médio no período" : "médio geral"}`));
     grid.append(card);
   });
+}
+
+function usePeriodTriageTotals() {
+  const filters = data.meta?.filters || {};
+  const dateFrom = String(filters.dateFrom || "");
+  const dateTo = String(filters.dateTo || "");
+  if (!dateFrom && !dateTo) return false;
+
+  const today = new Date();
+  const todayIso = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
+  return !(dateFrom === todayIso && dateTo === todayIso);
 }
 
 function renderSectors() {
@@ -507,6 +521,9 @@ function renderDashboard(nextData = data) {
   qs("#sectorTitle").textContent = isSingleDay
     ? "Situação das jornadas iniciadas no dia"
     : "Pacientes atuais por setor";
+  qs("#gravityTitle").textContent = usePeriodTriageTotals()
+    ? "Triados no período por prioridade"
+    : "Em jornada por prioridade";
   qs("#resolutionGauge").style.setProperty("--value", `${data.kpis.resolutividade * 100}%`);
   qs("#resolutionLabel").textContent = data.kpis.resolutividadeLabel;
   qs("#permanenceLabel").textContent = data.kpis.permanenciaMediaLabel;
