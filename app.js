@@ -406,7 +406,8 @@ function renderSectors() {
       card.classList.add("is-clickable");
       card.tabIndex = 0;
       card.setAttribute("role", "button");
-      card.setAttribute("aria-label", `Ver ${formatNumber(sector.current)} pacientes em ${displayLabel(sector)}`);
+      const itemLabel = publicApiUrl ? "jornadas" : "pacientes";
+      card.setAttribute("aria-label", `Ver ${formatNumber(sector.current)} ${itemLabel} em ${displayLabel(sector)}`);
       card.addEventListener("click", () => openSectorPatients(sector));
       card.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -420,7 +421,7 @@ function renderSectors() {
 }
 
 function canShowPatientDetails() {
-  return !publicApiUrl && ["http:", "https:"].includes(window.location.protocol);
+  return ["http:", "https:"].includes(window.location.protocol);
 }
 
 function localDetailUrl(path, params = {}) {
@@ -443,31 +444,56 @@ async function fetchLocalDetail(path, params) {
   return payload;
 }
 
+async function fetchDetail(path, params = {}) {
+  if (!publicApiUrl) return fetchLocalDetail(path, params);
+
+  const url = dashboardRequestUrl(params);
+  const payload = shouldUseJsonp()
+    ? await loadJsonp(url)
+    : await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } }).then((response) => {
+        if (!response.ok) throw new Error("Não foi possível carregar os dados.");
+        return response.json();
+      });
+  if (payload?.ok === false) throw new Error(payload.error || "Não foi possível carregar os dados.");
+  return payload;
+}
+
 async function openSectorPatients(sector) {
   const dialog = qs("#sectorPatientsDialog");
   const list = qs("#sectorPatientsList");
   const feedback = qs("#sectorPatientsFeedback");
   lastOpenedSector = sector;
+  const publicMode = Boolean(publicApiUrl);
+  qs("#sectorDialogEyebrow").textContent = publicMode ? "Jornadas no setor" : "Pacientes no setor";
   qs("#sectorPatientsTitle").textContent = displayLabel(sector);
-  qs("#sectorPatientsSummary").textContent = `${formatNumber(sector.current)} ${sector.current === 1 ? "paciente atual" : "pacientes atuais"}`;
+  qs("#sectorPatientsSummary").textContent = `${formatNumber(sector.current)} ${
+    publicMode ? (sector.current === 1 ? "jornada atual" : "jornadas atuais") : (sector.current === 1 ? "paciente atual" : "pacientes atuais")
+  }`;
   list.innerHTML = "";
-  feedback.textContent = "Carregando pacientes...";
+  feedback.textContent = publicMode ? "Carregando jornadas..." : "Carregando pacientes...";
   if (!dialog.open) dialog.showModal();
 
   const filters = activeDateFilters();
   try {
-    const payload = await fetchLocalDetail("/api/sector-patients", {
+    const payload = await fetchDetail("/api/sector-patients", {
+      view: publicMode ? "sector_journeys" : "",
       sector: sector.id,
       date_from: filters.dateFrom,
       date_to: filters.dateTo,
     });
-    qs("#sectorPatientsSummary").textContent = `${formatNumber(payload.total)} ${payload.total === 1 ? "paciente encontrado" : "pacientes encontrados"}`;
-    feedback.textContent = payload.total ? "" : "Nenhum paciente encontrado neste setor.";
-    payload.patients.forEach((patient) => {
+    qs("#sectorPatientsSummary").textContent = `${formatNumber(payload.total)} ${
+      publicMode ? (payload.total === 1 ? "jornada encontrada" : "jornadas encontradas") : (payload.total === 1 ? "paciente encontrado" : "pacientes encontrados")
+    }`;
+    feedback.textContent = payload.total ? "" : publicMode ? "Nenhuma jornada encontrada neste setor." : "Nenhum paciente encontrado neste setor.";
+    const items = publicMode ? payload.journeys || [] : payload.patients || [];
+    items.forEach((patient) => {
       const button = el("button", "patient-list-item");
       button.type = "button";
       const identity = el("span", "patient-list-identity");
-      identity.append(el("strong", "", patient.name), el("small", "", patient.cpf));
+      identity.append(
+        el("strong", "", publicMode ? `Jornada ${patient.id}` : patient.name),
+        el("small", "", publicMode ? `Último registro: ${patient.lastRecordedAt || "Não informado"}` : patient.cpf),
+      );
       button.append(identity, el("span", "patient-list-arrow", "›"));
       button.addEventListener("click", () => openPatientDetail(patient.id));
       list.append(button);
@@ -483,38 +509,53 @@ async function openPatientDetail(patientId) {
   const facts = qs("#patientFacts");
   const journey = qs("#patientJourneyList");
   const feedback = qs("#patientDetailFeedback");
+  const publicMode = Boolean(publicApiUrl);
   sectorDialog.close();
-  qs("#patientDetailTitle").textContent = "Paciente";
+  qs("#patientDialogEyebrow").textContent = publicMode ? "Detalhes da jornada" : "Jornada do paciente";
+  qs("#patientDetailTitle").textContent = publicMode ? "Jornada" : "Paciente";
   facts.innerHTML = "";
   journey.innerHTML = "";
-  feedback.textContent = "Carregando prontuário da jornada...";
+  feedback.textContent = "Carregando jornada...";
   if (!dialog.open) dialog.showModal();
 
   try {
-    const payload = await fetchLocalDetail("/api/patient-detail", { id: patientId });
-    const patient = payload.patient;
-    qs("#patientDetailTitle").textContent = patient.name;
-    const fields = [
-      ["CPF", patient.cpf],
-      ["Data de nascimento", patient.birthDate],
-      ["Sexo", patient.sex],
-      ["Cidade", patient.city],
-      ["Entrada", patient.entryDate],
-      ["Classificação de risco", patient.riskClassification],
-      ["Spot atual", patient.currentSpot],
-      ["Nº do boletim", patient.id],
-    ];
+    const filters = activeDateFilters();
+    const payload = await fetchDetail("/api/patient-detail", {
+      view: publicMode ? "journey_detail" : "",
+      id: patientId,
+      date_from: filters.dateFrom,
+      date_to: filters.dateTo,
+    });
+    const patient = publicMode ? payload.journey : payload.patient;
+    qs("#patientDetailTitle").textContent = publicMode ? `Jornada ${patient.id}` : patient.name;
+    const fields = publicMode
+      ? [
+          ["Identificador", patient.id],
+          ["Spot atual", patient.currentSpot],
+          ["Primeiro registro", patient.entryAt],
+        ]
+      : [
+          ["CPF", patient.cpf],
+          ["Data de nascimento", patient.birthDate],
+          ["Sexo", patient.sex],
+          ["Cidade", patient.city],
+          ["Entrada", patient.entryDate],
+          ["Classificação de risco", patient.riskClassification],
+          ["Spot atual", patient.currentSpot],
+          ["Nº do boletim", patient.id],
+        ];
     fields.forEach(([label, value]) => {
       const wrapper = el("div", "patient-fact");
       wrapper.append(el("dt", "", label), el("dd", "", value || "Não informado"));
       facts.append(wrapper);
     });
-    payload.journey.forEach((record) => {
+    const records = publicMode ? payload.records || [] : payload.journey || [];
+    records.forEach((record) => {
       const item = el("li", "journey-item");
       item.append(el("span", "journey-dot"), el("strong", "", record.spot), el("time", "", record.recordedAt));
       journey.append(item);
     });
-    feedback.textContent = payload.journey.length ? "" : "Nenhum registro de jornada encontrado.";
+    feedback.textContent = records.length ? "" : "Nenhum registro de jornada encontrado.";
   } catch (error) {
     feedback.textContent = error.message || "Não foi possível carregar o paciente.";
   }
