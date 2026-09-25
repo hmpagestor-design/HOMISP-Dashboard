@@ -500,6 +500,8 @@ async function openPatientDetail(patientId) {
       ["Sexo", patient.sex],
       ["Cidade", patient.city],
       ["Entrada", patient.entryDate],
+      ["Classificação de risco", patient.riskClassification],
+      ["Spot atual", patient.currentSpot],
       ["Nº do boletim", patient.id],
     ];
     fields.forEach(([label, value]) => {
