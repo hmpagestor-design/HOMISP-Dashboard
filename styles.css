@@ -1042,6 +1042,14 @@ h2 {
   font-weight: 750;
 }
 
+.outcome-card.is-clickable { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; }
+.outcome-card.is-clickable:hover,
+.outcome-card.is-clickable:focus-visible { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18), inset 0 0 0 2px rgba(255, 255, 255, 0.75); outline: none; }
+.patient-fact.is-risk.prioridade_10 { border-left-color: #d71920; }
+.patient-fact.is-risk.prioridade_60 { border-left-color: #d8b100; }
+.patient-fact.is-risk.prioridade_120 { border-left-color: #149447; }
+.patient-fact.is-risk.prioridade_240 { border-left-color: #2563eb; }
+
 .quality-list,
 .integrity-grid {
   display: grid;

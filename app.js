@@ -466,8 +466,9 @@ async function openSectorPatients(sector) {
   const publicMode = Boolean(publicApiUrl);
   qs("#sectorDialogEyebrow").textContent = publicMode ? "Jornadas no setor" : "Pacientes no setor";
   qs("#sectorPatientsTitle").textContent = displayLabel(sector);
-  qs("#sectorPatientsSummary").textContent = `${formatNumber(sector.current)} ${
-    publicMode ? (sector.current === 1 ? "jornada atual" : "jornadas atuais") : (sector.current === 1 ? "paciente atual" : "pacientes atuais")
+  const count = sector.current ?? sector.patients ?? 0;
+  qs("#sectorPatientsSummary").textContent = `${formatNumber(count)} ${
+    sector.isOutcome ? (count === 1 ? "jornada encerrada" : "jornadas encerradas") : publicMode ? (count === 1 ? "jornada atual" : "jornadas atuais") : (count === 1 ? "paciente atual" : "pacientes atuais")
   }`;
   list.innerHTML = "";
   feedback.textContent = publicMode ? "Carregando jornadas..." : "Carregando pacientes...";
@@ -533,6 +534,8 @@ async function openPatientDetail(patientId) {
           ["Identificador", patient.id],
           ["Spot atual", patient.currentSpot],
           ["Primeiro registro", patient.entryAt],
+          ["Tempo de jornada", patient.journeyDuration],
+          ...(patient.riskClassification ? [["Classificação de risco", patient.riskClassification, patient.riskClassificationId]] : []),
         ]
       : [
           ["CPF", patient.cpf],
@@ -540,12 +543,14 @@ async function openPatientDetail(patientId) {
           ["Sexo", patient.sex],
           ["Cidade", patient.city],
           ["Entrada", patient.entryDate],
-          ["Classificação de risco", patient.riskClassification],
+          ["Tempo de jornada", patient.journeyDuration],
+          ...(patient.riskClassification ? [["Classificação de risco", patient.riskClassification, patient.riskClassificationId]] : []),
           ["Spot atual", patient.currentSpot],
           ["Nº do boletim", patient.id],
         ];
-    fields.forEach(([label, value]) => {
+    fields.forEach(([label, value, priorityId]) => {
       const wrapper = el("div", "patient-fact");
+      if (priorityId) wrapper.classList.add("is-risk", priorityId);
       wrapper.append(el("dt", "", label), el("dd", "", value || "Não informado"));
       facts.append(wrapper);
     });
@@ -587,6 +592,20 @@ function renderOutcomes() {
     card.append(el("span", "", item.label));
     card.append(el("strong", "", formatNumber(item.patients)));
     card.append(el("small", "", item.patients === 1 ? "ocorrência registrada" : "ocorrências registradas"));
+    if (canShowPatientDetails() && item.patients > 0) {
+      const outcome = { ...item, current: item.patients, isOutcome: true };
+      card.classList.add("is-clickable");
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", `Ver ${formatNumber(item.patients)} jornadas em ${item.label}`);
+      card.addEventListener("click", () => openSectorPatients(outcome));
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openSectorPatients(outcome);
+        }
+      });
+    }
     grid.append(card);
   });
 }
