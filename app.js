@@ -2,6 +2,9 @@ let data = window.HOMISP_DASHBOARD_DATA;
 let refreshTimer = null;
 let refreshInFlight = false;
 let lastOpenedSector = null;
+const detailRequestCache = new Map();
+let publicJourneyLists = null;
+let publicJourneyListsPromise = null;
 
 const refreshIntervalMs = 30000;
 const isDevMode = new URLSearchParams(window.location.search).get("dev") === "1";
@@ -448,14 +451,42 @@ async function fetchDetail(path, params = {}) {
   if (!publicApiUrl) return fetchLocalDetail(path, params);
 
   const url = dashboardRequestUrl(params);
-  const payload = shouldUseJsonp()
+  const cacheKey = url.replace(/([?&])ts=\d+&?/, "$1").replace(/[?&]$/, "");
+  if (detailRequestCache.has(cacheKey)) return detailRequestCache.get(cacheKey);
+  const request = (shouldUseJsonp()
     ? await loadJsonp(url)
     : await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } }).then((response) => {
         if (!response.ok) throw new Error("Não foi possível carregar os dados.");
         return response.json();
-      });
+      }));
+  const payload = await request;
   if (payload?.ok === false) throw new Error(payload.error || "Não foi possível carregar os dados.");
+  if (detailRequestCache.size > 100) detailRequestCache.clear();
+  detailRequestCache.set(cacheKey, payload);
   return payload;
+}
+
+function prefetchPublicJourneyLists() {
+  if (!publicApiUrl || publicJourneyLists || publicJourneyListsPromise) return publicJourneyListsPromise;
+  const filters = activeDateFilters();
+  publicJourneyListsPromise = fetchDetail("/api/sector-patients", {
+    view: "sector_journeys",
+    sector: "__all__",
+    date_from: filters.dateFrom,
+    date_to: filters.dateTo,
+  }).then((payload) => {
+    publicJourneyLists = payload.groups || {};
+    return publicJourneyLists;
+  }).catch(() => null).finally(() => {
+    publicJourneyListsPromise = null;
+  });
+  return publicJourneyListsPromise;
+}
+
+function resetPublicJourneyLists() {
+  publicJourneyLists = null;
+  publicJourneyListsPromise = null;
+  detailRequestCache.clear();
 }
 
 async function openSectorPatients(sector) {
@@ -476,12 +507,15 @@ async function openSectorPatients(sector) {
 
   const filters = activeDateFilters();
   try {
-    const payload = await fetchDetail("/api/sector-patients", {
-      view: publicMode ? "sector_journeys" : "",
-      sector: sector.id,
-      date_from: filters.dateFrom,
-      date_to: filters.dateTo,
-    });
+    if (publicMode && !publicJourneyLists) await prefetchPublicJourneyLists();
+    const payload = publicMode && publicJourneyLists
+      ? { ok: true, journeys: publicJourneyLists[sector.id] || [], total: (publicJourneyLists[sector.id] || []).length }
+      : await fetchDetail("/api/sector-patients", {
+          view: publicMode ? "sector_journeys" : "",
+          sector: sector.id,
+          date_from: filters.dateFrom,
+          date_to: filters.dateTo,
+        });
     qs("#sectorPatientsSummary").textContent = `${formatNumber(payload.total)} ${
       publicMode ? (payload.total === 1 ? "jornada encontrada" : "jornadas encontradas") : (payload.total === 1 ? "paciente encontrado" : "pacientes encontrados")
     }`;
@@ -728,6 +762,7 @@ function renderDashboard(nextData = data) {
   renderLineChart();
   renderSectors();
   renderOutcomes();
+  prefetchPublicJourneyLists();
   if (isDevMode) renderQuality();
 }
 
@@ -784,6 +819,7 @@ function setupDateFilter() {
       setRefreshStatus("error", "Período inválido");
       return;
     }
+    resetPublicJourneyLists();
     updateFilterUrl();
     refreshDashboard();
   });
@@ -791,6 +827,7 @@ function setupDateFilter() {
   clearButton.addEventListener("click", () => {
     dateFrom.value = "";
     dateTo.value = "";
+    resetPublicJourneyLists();
     updateFilterUrl();
     refreshDashboard();
   });
