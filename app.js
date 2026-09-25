@@ -1,6 +1,7 @@
 let data = window.HOMISP_DASHBOARD_DATA;
 let refreshTimer = null;
 let refreshInFlight = false;
+let lastOpenedSector = null;
 
 const refreshIntervalMs = 30000;
 const isDevMode = new URLSearchParams(window.location.search).get("dev") === "1";
@@ -401,7 +402,134 @@ function renderSectors() {
     card.append(top);
     card.append(el("strong", "", formatNumber(sector.current)));
     card.append(el("small", "", `${sector.avgLeadMinutes} min médio`));
+    if (canShowPatientDetails() && sector.current > 0) {
+      card.classList.add("is-clickable");
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", `Ver ${formatNumber(sector.current)} pacientes em ${displayLabel(sector)}`);
+      card.addEventListener("click", () => openSectorPatients(sector));
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openSectorPatients(sector);
+        }
+      });
+    }
     grid.append(card);
+  });
+}
+
+function canShowPatientDetails() {
+  return !publicApiUrl && ["http:", "https:"].includes(window.location.protocol);
+}
+
+function localDetailUrl(path, params = {}) {
+  const url = new URL(path, window.location.origin);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) url.searchParams.set(key, value);
+  });
+  return url.toString();
+}
+
+async function fetchLocalDetail(path, params) {
+  const response = await fetch(localDetailUrl(path, params), {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || "Não foi possível carregar os dados.");
+  }
+  return payload;
+}
+
+async function openSectorPatients(sector) {
+  const dialog = qs("#sectorPatientsDialog");
+  const list = qs("#sectorPatientsList");
+  const feedback = qs("#sectorPatientsFeedback");
+  lastOpenedSector = sector;
+  qs("#sectorPatientsTitle").textContent = displayLabel(sector);
+  qs("#sectorPatientsSummary").textContent = `${formatNumber(sector.current)} ${sector.current === 1 ? "paciente atual" : "pacientes atuais"}`;
+  list.innerHTML = "";
+  feedback.textContent = "Carregando pacientes...";
+  if (!dialog.open) dialog.showModal();
+
+  const filters = activeDateFilters();
+  try {
+    const payload = await fetchLocalDetail("/api/sector-patients", {
+      sector: sector.id,
+      date_from: filters.dateFrom,
+      date_to: filters.dateTo,
+    });
+    qs("#sectorPatientsSummary").textContent = `${formatNumber(payload.total)} ${payload.total === 1 ? "paciente encontrado" : "pacientes encontrados"}`;
+    feedback.textContent = payload.total ? "" : "Nenhum paciente encontrado neste setor.";
+    payload.patients.forEach((patient) => {
+      const button = el("button", "patient-list-item");
+      button.type = "button";
+      const identity = el("span", "patient-list-identity");
+      identity.append(el("strong", "", patient.name), el("small", "", patient.cpf));
+      button.append(identity, el("span", "patient-list-arrow", "›"));
+      button.addEventListener("click", () => openPatientDetail(patient.id));
+      list.append(button);
+    });
+  } catch (error) {
+    feedback.textContent = error.message || "Não foi possível carregar os pacientes.";
+  }
+}
+
+async function openPatientDetail(patientId) {
+  const sectorDialog = qs("#sectorPatientsDialog");
+  const dialog = qs("#patientDetailDialog");
+  const facts = qs("#patientFacts");
+  const journey = qs("#patientJourneyList");
+  const feedback = qs("#patientDetailFeedback");
+  sectorDialog.close();
+  qs("#patientDetailTitle").textContent = "Paciente";
+  facts.innerHTML = "";
+  journey.innerHTML = "";
+  feedback.textContent = "Carregando prontuário da jornada...";
+  if (!dialog.open) dialog.showModal();
+
+  try {
+    const payload = await fetchLocalDetail("/api/patient-detail", { id: patientId });
+    const patient = payload.patient;
+    qs("#patientDetailTitle").textContent = patient.name;
+    const fields = [
+      ["CPF", patient.cpf],
+      ["Data de nascimento", patient.birthDate],
+      ["Sexo", patient.sex],
+      ["Cidade", patient.city],
+      ["Entrada", patient.entryDate],
+      ["Nº do boletim", patient.id],
+    ];
+    fields.forEach(([label, value]) => {
+      const wrapper = el("div", "patient-fact");
+      wrapper.append(el("dt", "", label), el("dd", "", value || "Não informado"));
+      facts.append(wrapper);
+    });
+    payload.journey.forEach((record) => {
+      const item = el("li", "journey-item");
+      item.append(el("span", "journey-dot"), el("strong", "", record.spot), el("time", "", record.recordedAt));
+      journey.append(item);
+    });
+    feedback.textContent = payload.journey.length ? "" : "Nenhum registro de jornada encontrado.";
+  } catch (error) {
+    feedback.textContent = error.message || "Não foi possível carregar o paciente.";
+  }
+}
+
+function setupDetailDialogs() {
+  document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+    button.addEventListener("click", () => qs(`#${button.dataset.closeDialog}`)?.close());
+  });
+  document.querySelectorAll(".detail-dialog").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  });
+  qs("#patientDetailBack")?.addEventListener("click", () => {
+    qs("#patientDetailDialog")?.close();
+    if (lastOpenedSector && !qs("#sectorPatientsDialog")?.open) qs("#sectorPatientsDialog")?.showModal();
   });
 }
 
@@ -441,7 +569,7 @@ function renderQuality() {
     ],
     [
       "Privacidade",
-      "Este painel exporta apenas agregações. Nomes, CPFs e identificadores individuais não aparecem na interface.",
+      "O painel público exporta apenas agregações. Nome, CPF e jornada individual ficam disponíveis somente na aplicação local e na rede privada do hospital.",
     ],
     [
       "Pacientes únicos",
@@ -612,6 +740,7 @@ function init() {
   else setRefreshStatus("snapshot", "Carregando dados");
   if (publicApiUrl) setRefreshStatus("snapshot", "Atualizando dados...");
   setupTabs();
+  setupDetailDialogs();
   startAutoRefresh();
 }
 

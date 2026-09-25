@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Jornada do Paciente | MISP Ceará-Mirim</title>
-    <link rel="stylesheet" href="./styles.css?v=20260924105421" />
+    <link rel="stylesheet" href="./styles.css?v=20260925093234" />
   </head>
   <body>
     <div class="shell">
@@ -218,8 +218,51 @@
       </main>
     </div>
 
-    <script src="./dashboard-data.js?v=20260924105421"></script>
-    <script src="./dashboard-config.js?v=20260924105421"></script>
-    <script src="./app.js?v=20260924105421"></script>
+    <dialog class="detail-dialog" id="sectorPatientsDialog" aria-labelledby="sectorPatientsTitle">
+      <div class="dialog-shell">
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">Pacientes no setor</p>
+            <h2 id="sectorPatientsTitle">Setor</h2>
+            <p class="dialog-summary" id="sectorPatientsSummary"></p>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="sectorPatientsDialog" aria-label="Fechar">×</button>
+        </header>
+        <div class="dialog-body">
+          <div class="patient-list" id="sectorPatientsList"></div>
+          <p class="dialog-feedback" id="sectorPatientsFeedback" role="status"></p>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="detail-dialog" id="patientDetailDialog" aria-labelledby="patientDetailTitle">
+      <div class="dialog-shell">
+        <header class="dialog-header">
+          <div class="dialog-title-row">
+            <button class="icon-button" type="button" id="patientDetailBack" aria-label="Voltar para pacientes do setor">←</button>
+            <div>
+              <p class="eyebrow">Jornada do paciente</p>
+              <h2 id="patientDetailTitle">Paciente</h2>
+            </div>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="patientDetailDialog" aria-label="Fechar">×</button>
+        </header>
+        <div class="dialog-body">
+          <dl class="patient-facts" id="patientFacts"></dl>
+          <section class="journey-section" aria-labelledby="patientJourneyTitle">
+            <div class="journey-heading">
+              <p class="eyebrow">Registros</p>
+              <h3 id="patientJourneyTitle">Etapas da jornada</h3>
+            </div>
+            <ol class="journey-list" id="patientJourneyList"></ol>
+          </section>
+          <p class="dialog-feedback" id="patientDetailFeedback" role="status"></p>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./dashboard-data.js?v=20260925093234"></script>
+    <script src="./dashboard-config.js?v=20260925093234"></script>
+    <script src="./app.js?v=20260925093234"></script>
   </body>
 </html>
