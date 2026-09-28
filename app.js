@@ -130,7 +130,7 @@ function loadJsonp(url) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("Tempo limite ao carregar dados externos"));
-    }, 25000);
+    }, 60000);
 
     function cleanup() {
       window.clearTimeout(timeout);
