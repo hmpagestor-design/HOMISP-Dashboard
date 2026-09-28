@@ -110,8 +110,14 @@ function dashboardRequestUrl(extra = {}) {
 
 function shouldUseJsonp() {
   if (!publicApiUrl) return false;
+  // Apps Script redirects its web app responses through Google domains that do
+  // not provide reliable CORS headers in every browser. Always use JSONP for
+  // these endpoints, even if an older cached config still says "cors".
+  if (publicApiUrl.includes("script.google.com/") || publicApiUrl.includes("script.googleusercontent.com/")) {
+    return true;
+  }
   if (publicApiMode) return publicApiMode === "jsonp";
-  return publicApiUrl.includes("script.google.com/") || publicApiUrl.includes("script.googleusercontent.com/");
+  return false;
 }
 
 function loadJsonp(url) {
