@@ -309,6 +309,185 @@ h2 {
   grid-column: span 4;
 }
 
+.registration-efficiency-panel { overflow: hidden; }
+
+.registration-efficiency-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.75fr);
+  gap: 28px;
+}
+
+.mandatory-flow,
+.nursing-quality { min-width: 0; }
+
+.nursing-quality {
+  padding-left: 28px;
+  border-left: 1px solid var(--line);
+}
+
+.efficiency-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.efficiency-section-heading > div > span {
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.efficiency-section-heading h3,
+.nursing-quality h3 {
+  margin: 5px 0 0;
+  font-size: 1.08rem;
+}
+
+.complete-journey-kpi {
+  flex: 0 0 auto;
+  display: grid;
+  text-align: right;
+}
+
+.complete-journey-kpi strong {
+  color: var(--teal-dark);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.complete-journey-kpi small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.efficiency-bars { display: grid; gap: 16px; }
+
+.efficiency-row-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 7px;
+}
+
+.efficiency-row-heading strong { font-size: 0.88rem; }
+
+.efficiency-row-heading span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.efficiency-track {
+  height: 10px;
+  overflow: hidden;
+  background: #e6edf3;
+  border-radius: 5px;
+}
+
+.efficiency-fill {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+  border-radius: inherit;
+}
+
+.efficiency-fill.stage-triagem { background: #2870d6; }
+.efficiency-fill.stage-consultorio { background: #7c3aed; }
+.efficiency-fill.stage-desfecho { background: #159447; }
+
+.journey-status-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.journey-status-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.journey-status-item + .journey-status-item { border-left: 1px solid var(--line); }
+
+.journey-status-item span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.journey-status-item strong { font-size: 1.15rem; }
+.journey-status-item.is-overdue strong { color: #c93439; }
+.journey-status-item.is-hospitalized strong { color: #6d28d9; }
+.journey-status-item.is-incomplete strong { color: #d97706; }
+
+.nursing-integrity-kpi {
+  display: grid;
+  margin: 28px 0 24px;
+}
+
+.nursing-integrity-kpi strong {
+  color: var(--teal-dark);
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.nursing-integrity-kpi span {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.nursing-quality-metrics {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  margin: 0;
+}
+
+.nursing-quality-metrics dt,
+.nursing-quality-metrics dd {
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.nursing-quality-metrics dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.nursing-quality-metrics dd {
+  font-weight: 900;
+  text-align: right;
+}
+
+@media (max-width: 920px) {
+  .registration-efficiency-layout { grid-template-columns: 1fr; }
+  .nursing-quality {
+    padding: 24px 0 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .efficiency-section-heading { display: grid; }
+  .complete-journey-kpi { text-align: left; }
+  .journey-status-summary { grid-template-columns: 1fr; }
+  .journey-status-item + .journey-status-item {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+}
+
 .span-3 {
   grid-column: span 3;
 }
@@ -906,10 +1085,39 @@ h2 {
   font-weight: 700;
 }
 
+.patient-list-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  text-align: right;
+}
+
+.patient-list-meta .patient-list-record-time {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .patient-list-arrow {
   color: var(--teal);
   font-size: 1.6rem;
   font-weight: 900;
+}
+
+@media (max-width: 680px) {
+  .patient-list-item {
+    align-items: flex-start;
+  }
+
+  .patient-list-meta {
+    max-width: 45%;
+  }
+
+  .patient-list-meta .patient-list-record-time {
+    line-height: 1.25;
+  }
 }
 
 .dialog-feedback {

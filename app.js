@@ -525,11 +525,15 @@ async function openSectorPatients(sector) {
       const button = el("button", "patient-list-item");
       button.type = "button";
       const identity = el("span", "patient-list-identity");
-      identity.append(
-        el("strong", "", publicMode ? `Jornada ${patient.id}` : patient.name),
-        el("small", "", publicMode ? `Último registro: ${patient.lastRecordedAt || "Não informado"}` : patient.cpf),
+      identity.append(el("strong", "", publicMode ? `Jornada ${patient.id}` : patient.name));
+      if (!publicMode) identity.append(el("small", "", patient.cpf));
+      const recordLabel = publicMode ? "Último registro" : "Registro no setor";
+      const recordMeta = el("span", "patient-list-meta");
+      recordMeta.append(
+        el("small", "patient-list-record-time", `${recordLabel}: ${patient.lastRecordedAt || "Não informado"}`),
+        el("span", "patient-list-arrow", "›"),
       );
-      button.append(identity, el("span", "patient-list-arrow", "›"));
+      button.append(identity, recordMeta);
       button.addEventListener("click", () => openPatientDetail(patient.id));
       list.append(button);
     });
@@ -641,6 +645,63 @@ function renderOutcomes() {
       });
     }
     grid.append(card);
+  });
+}
+
+function renderRegistrationEfficiency() {
+  const efficiency = data.charts.registrationEfficiency;
+  const bars = qs("#registrationEfficiencyBars");
+  if (!efficiency || !bars) return;
+
+  const total = Number(efficiency.totalEntries) || 0;
+  const rate = (value, denominator = total) => (denominator ? (Number(value) || 0) / denominator : 0);
+  const percent = (value) => `${formatDecimal(value * 100, 1)}%`;
+  bars.innerHTML = "";
+  (efficiency.stages || []).forEach((stage) => {
+    const coverage = rate(stage.patients);
+    const row = el("div", "efficiency-row");
+    const heading = el("div", "efficiency-row-heading");
+    heading.append(
+      el("strong", "", stage.label),
+      el("span", "", `${formatNumber(stage.patients)} de ${formatNumber(total)} · ${percent(coverage)}`),
+    );
+    const track = el("div", "efficiency-track");
+    const fill = el("span", `efficiency-fill stage-${stage.id}`);
+    fill.style.width = `${Math.min(100, coverage * 100)}%`;
+    track.append(fill);
+    row.append(heading, track);
+    bars.append(row);
+  });
+
+  const complete = Number(efficiency.complete) || 0;
+  qs("#completeJourneyRate").textContent = percent(rate(complete));
+  qs("#completeJourneyCount").textContent = `${formatNumber(complete)} ${complete === 1 ? "jornada completa" : "jornadas completas"}`;
+  qs("#efficiencyPeriodLabel").textContent = total === 1 ? "1 entrada no período" : `${formatNumber(total)} entradas no período`;
+
+  const statusSummary = qs("#journeyStatusSummary");
+  statusSummary.innerHTML = "";
+  [
+    ["Em andamento", efficiency.inProgress, "current"],
+    ["Internadas", efficiency.hospitalized, "hospitalized"],
+    ["Pendentes >24h", efficiency.overdue, "overdue"],
+    ["Encerradas incompletas", efficiency.closedIncomplete, "incomplete"],
+  ].forEach(([label, value, modifier]) => {
+    const item = el("div", `journey-status-item is-${modifier}`);
+    item.append(el("span", "", label), el("strong", "", formatNumber(value)));
+    statusSummary.append(item);
+  });
+
+  const nursing = efficiency.nursing || {};
+  qs("#nursingIntegrityRate").textContent = percent(Number(nursing.integrityRate) || 0);
+  qs("#nursingIntegrityCaption").textContent = `${formatNumber(nursing.integrity)} de ${formatNumber(nursing.passages)} passagens com fluxo íntegro`;
+  const nursingMetrics = qs("#nursingQualityMetrics");
+  nursingMetrics.innerHTML = "";
+  [
+    ["Passagens registradas", nursing.passages],
+    ["Sem consultório anterior", nursing.withoutPreviousConsult],
+    ["Sem continuidade >24h", nursing.withoutContinuity],
+  ].forEach(([label, value]) => {
+    nursingMetrics.append(el("dt", "", label), el("dd", "", formatNumber(value)));
   });
 }
 
@@ -762,6 +823,7 @@ function renderDashboard(nextData = data) {
   renderLineChart();
   renderSectors();
   renderOutcomes();
+  renderRegistrationEfficiency();
   prefetchPublicJourneyLists();
   if (isDevMode) renderQuality();
 }

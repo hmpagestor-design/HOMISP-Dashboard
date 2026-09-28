@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Jornada do Paciente | MISP Ceará-Mirim</title>
-    <link rel="stylesheet" href="./styles.css?v=20260925145843" />
+    <link rel="stylesheet" href="./styles.css?v=20260928092428" />
   </head>
   <body>
     <div class="shell">
@@ -189,6 +189,42 @@
               </div>
               <div id="outcomeGrid" class="outcome-grid"></div>
             </article>
+
+            <article class="panel span-12 registration-efficiency-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Qualidade do registro</p>
+                  <h2>Completude da jornada</h2>
+                </div>
+                <span id="efficiencyPeriodLabel" class="panel-badge">Período selecionado</span>
+              </div>
+              <div class="registration-efficiency-layout">
+                <section class="mandatory-flow" aria-labelledby="mandatoryFlowTitle">
+                  <div class="efficiency-section-heading">
+                    <div>
+                      <span>ETAPAS OBRIGATÓRIAS</span>
+                      <h3 id="mandatoryFlowTitle">Cobertura dos registros</h3>
+                    </div>
+                    <div class="complete-journey-kpi">
+                      <strong id="completeJourneyRate">0%</strong>
+                      <small id="completeJourneyCount">0 jornadas completas</small>
+                    </div>
+                  </div>
+                  <div id="registrationEfficiencyBars" class="efficiency-bars"></div>
+                  <div id="journeyStatusSummary" class="journey-status-summary"></div>
+                </section>
+
+                <section class="nursing-quality" aria-labelledby="nursingQualityTitle">
+                  <p class="eyebrow">Enfermagem</p>
+                  <h3 id="nursingQualityTitle">Integridade do fluxo registrado</h3>
+                  <div class="nursing-integrity-kpi">
+                    <strong id="nursingIntegrityRate">0%</strong>
+                    <span id="nursingIntegrityCaption">0 fluxos íntegros</span>
+                  </div>
+                  <dl id="nursingQualityMetrics" class="nursing-quality-metrics"></dl>
+                </section>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -261,8 +297,8 @@
       </div>
     </dialog>
 
-    <script src="./dashboard-data.js?v=20260925145843"></script>
-    <script src="./dashboard-config.js?v=20260925145843"></script>
-    <script src="./app.js?v=20260925145843"></script>
+    <script src="./dashboard-data.js?v=20260928092428"></script>
+    <script src="./dashboard-config.js?v=20260928092428"></script>
+    <script src="./app.js?v=20260928092428"></script>
   </body>
 </html>
