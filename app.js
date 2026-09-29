@@ -131,7 +131,7 @@ function loadIframeTransport(url) {
     const timeout = window.setTimeout(() => {
       cleanup();
       reject(new Error("Tempo limite ao carregar dados externos"));
-    }, 60000);
+    }, 20000);
 
     function cleanup() {
       window.clearTimeout(timeout);
@@ -204,7 +204,11 @@ async function requestDashboardDataWithRetry(maxAttempts = 2) {
 async function requestDashboardData(extra = {}) {
   const url = dashboardRequestUrl(extra);
   if (shouldUseIframeTransport()) {
-    return loadIframeTransport(url);
+    try {
+      return await loadIframeTransport(url);
+    } catch (error) {
+      return loadJsonp(url);
+    }
   }
   if (shouldUseJsonp()) {
     return loadJsonp(url);
@@ -501,7 +505,7 @@ async function fetchDetail(path, params = {}) {
   const cacheKey = url.replace(/([?&])ts=\d+&?/, "$1").replace(/[?&]$/, "");
   if (detailRequestCache.has(cacheKey)) return detailRequestCache.get(cacheKey);
   const request = (shouldUseIframeTransport()
-    ? await loadIframeTransport(url)
+    ? await loadIframeTransport(url).catch(() => loadJsonp(url))
     : shouldUseJsonp()
       ? await loadJsonp(url)
       : await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } }).then((response) => {
