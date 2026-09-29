@@ -110,14 +110,7 @@ function dashboardRequestUrl(extra = {}) {
 
 function shouldUseJsonp() {
   if (!publicApiUrl) return false;
-  // Apps Script redirects its web app responses through Google domains that do
-  // not provide reliable CORS headers in every browser. Always use JSONP for
-  // these endpoints, even if an older cached config still says "cors".
-  if (publicApiUrl.includes("script.google.com/") || publicApiUrl.includes("script.googleusercontent.com/")) {
-    return true;
-  }
-  if (publicApiMode) return publicApiMode === "jsonp";
-  return false;
+  return publicApiMode === "jsonp";
 }
 
 function loadJsonp(url) {
@@ -174,9 +167,14 @@ async function requestDashboardData(extra = {}) {
     return loadJsonp(url);
   }
 
-  const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
+  try {
+    const response = await fetch(url, { cache: "no-store", redirect: "follow" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  } catch (error) {
+    if (publicApiMode === "cors") throw error;
+    return loadJsonp(url);
+  }
 }
 
 function updateFilterUrl() {
