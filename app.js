@@ -126,7 +126,7 @@ function loadIframeTransport(url) {
 
   return new Promise((resolve, reject) => {
     const frame = document.createElement("iframe");
-    frame.hidden = true;
+    frame.style.cssText = "position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;border:0;opacity:0;pointer-events:none";
     frame.title = "Atualização de dados do dashboard";
     const timeout = window.setTimeout(() => {
       cleanup();
