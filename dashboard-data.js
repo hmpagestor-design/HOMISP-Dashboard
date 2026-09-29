@@ -1,5 +1,5 @@
 window.HOMISP_DASHBOARD_DATA = {
-  "generatedAt": "2026-09-29T10:20:55",
+  "generatedAt": "2026-09-29T10:23:28",
   "source": {
     "sheetId": "1eXlFlYblp2GOmqQbfwrQ7jA5UD8Us7KEScU7LpfX6FQ"
   },
@@ -23,34 +23,34 @@ window.HOMISP_DASHBOARD_DATA = {
     "Dados pessoais de pacientes nao foram exportados para este dashboard."
   ],
   "kpis": {
-    "totalPacientes": 8190,
+    "totalPacientes": 8191,
     "pacientesSemCpf": 667,
-    "totalAtendimentos": 12346,
-    "pacientesAtuais": 221,
-    "registros": 19271,
-    "gravidades": 3752,
+    "totalAtendimentos": 12347,
+    "pacientesAtuais": 220,
+    "registros": 19275,
+    "gravidades": 3753,
     "resolutividade": 1.0,
     "resolutividadeLabel": "100%",
-    "mediaLeadMinutos": 33.3,
+    "mediaLeadMinutos": 33.4,
     "mediaLeadLabel": "00:33",
     "gargaloAtual": "enfermagem",
     "gargaloAtualLabel": "Enfermagem",
     "gargaloAtualTempo": 63.3,
     "gargaloAtualTempoLabel": "63.3 min",
-    "permanenciaMediaMinutos": 137.4,
+    "permanenciaMediaMinutos": 137.2,
     "permanenciaMediaLabel": "02:17",
     "taxaReingresso": 0.2889,
     "taxaReingressoLabel": "28.9%",
-    "mediaPacientesDia": 248.7,
-    "mediaPacientesDiaLabel": "248,7",
+    "mediaPacientesDia": 248.8,
+    "mediaPacientesDiaLabel": "248,8",
     "diasComEntrada": 49
   },
   "sectors": [
     {
       "id": "recepcao_adulto",
       "label": "Aguardando triagem adulto",
-      "current": 88,
-      "visits": 12304,
+      "current": 86,
+      "visits": 12305,
       "avgLeadMinutes": 0.0,
       "totalLeadMinutes": 0,
       "isFinal": false
@@ -67,10 +67,10 @@ window.HOMISP_DASHBOARD_DATA = {
     {
       "id": "triagem_adulto",
       "label": "Triagem adulto",
-      "current": 50,
-      "visits": 3754,
+      "current": 51,
+      "visits": 3755,
       "avgLeadMinutes": 17.6,
-      "totalLeadMinutes": 66054,
+      "totalLeadMinutes": 66095,
       "isFinal": false
     },
     {
@@ -167,7 +167,7 @@ window.HOMISP_DASHBOARD_DATA = {
       "id": "alta_hospitalar",
       "label": "Alta hospitalar",
       "current": 0,
-      "visits": 455,
+      "visits": 457,
       "avgLeadMinutes": 0.0,
       "totalLeadMinutes": 0,
       "isFinal": true
@@ -177,7 +177,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "sex": [
       {
         "label": "Feminino",
-        "value": 4633
+        "value": 4634
       },
       {
         "label": "Masculino",
@@ -191,7 +191,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "ageClass": [
       {
         "label": "Adulto",
-        "value": 8183
+        "value": 8184
       },
       {
         "label": "Infantil",
@@ -201,7 +201,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "cities": [
       {
         "label": "Ceará-Mirim",
-        "value": 8022
+        "value": 8023
       },
       {
         "label": "Natal",
@@ -443,7 +443,7 @@ window.HOMISP_DASHBOARD_DATA = {
       },
       {
         "date": "2026-09-29",
-        "value": 111
+        "value": 112
       }
     ],
     "gravity": [
@@ -469,8 +469,8 @@ window.HOMISP_DASHBOARD_DATA = {
         "id": "prioridade_120",
         "label": "Pouco urgente",
         "targetLabel": "120 min",
-        "patients": 40,
-        "totalClassified": 1377,
+        "patients": 41,
+        "totalClassified": 1378,
         "avgLeadMinutes": 19.1,
         "avgLeadLabel": "00:19"
       },
@@ -488,7 +488,7 @@ window.HOMISP_DASHBOARD_DATA = {
       {
         "id": "alta_hospitalar",
         "label": "Alta hospitalar",
-        "patients": 401
+        "patients": 403
       },
       {
         "id": "transferencia",
@@ -527,8 +527,8 @@ window.HOMISP_DASHBOARD_DATA = {
         "label": "Triagem adulto",
         "value": 17.6,
         "id": "triagem_adulto",
-        "current": 50,
-        "visits": 3754
+        "current": 51,
+        "visits": 3755
       },
       {
         "label": "Internação",
@@ -539,17 +539,17 @@ window.HOMISP_DASHBOARD_DATA = {
       }
     ],
     "registrationEfficiency": {
-      "totalEntries": 12188,
+      "totalEntries": 12189,
       "stages": [
         {
           "id": "entrada",
           "label": "Entrada registrada",
-          "patients": 12188
+          "patients": 12189
         },
         {
           "id": "triagem",
           "label": "Triagem registrada",
-          "patients": 3618
+          "patients": 3619
         },
         {
           "id": "consultorio",
@@ -559,12 +559,12 @@ window.HOMISP_DASHBOARD_DATA = {
         {
           "id": "desfecho",
           "label": "Desfecho registrado",
-          "patients": 413
+          "patients": 415
         }
       ],
       "complete": 111,
-      "closedIncomplete": 302,
-      "inProgress": 220,
+      "closedIncomplete": 304,
+      "inProgress": 219,
       "hospitalized": 0,
       "overdue": 11555,
       "nursing": {

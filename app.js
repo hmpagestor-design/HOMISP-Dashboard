@@ -121,9 +121,7 @@ function shouldUseIframeTransport() {
 function loadIframeTransport(url) {
   const requestId = `homisp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const requestUrl = new URL(url, window.location.href);
-  requestUrl.searchParams.set("transport", "iframe");
-  requestUrl.searchParams.set("request_id", requestId);
-  requestUrl.searchParams.set("authuser", "0");
+  requestUrl.searchParams.set("callback", "homispIframeCallback");
 
   return new Promise((resolve, reject) => {
     const frame = document.createElement("iframe");
@@ -149,7 +147,8 @@ function loadIframeTransport(url) {
     }
 
     window.addEventListener("message", receive);
-    frame.src = requestUrl.toString();
+    const scriptUrl = requestUrl.toString().replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    frame.srcdoc = `<!doctype html><meta charset="utf-8"><script>window.homispIframeCallback=function(payload){top.postMessage({type:"homisp-dashboard-data",requestId:${JSON.stringify(requestId)},payload:payload},"*")};<\/script><script src="${scriptUrl}"><\/script>`;
     document.body.append(frame);
   });
 }
