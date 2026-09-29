@@ -141,7 +141,6 @@ function loadIframeTransport(url) {
 
     function receive(event) {
       const message = event.data;
-      if (event.source !== frame.contentWindow) return;
       if (!message || message.type !== "homisp-dashboard-data" || message.requestId !== requestId) return;
       cleanup();
       if (message.error) reject(new Error(message.error));
