@@ -115,7 +115,7 @@ function shouldUseJsonp() {
 
 function shouldUseIframeTransport() {
   if (!publicApiUrl) return false;
-  return publicApiMode === "iframe" || publicApiUrl.includes("script.google.com/");
+  return publicApiMode === "iframe";
 }
 
 function loadIframeTransport(url) {
