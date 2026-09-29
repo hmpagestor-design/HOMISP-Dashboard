@@ -113,6 +113,47 @@ function shouldUseJsonp() {
   return publicApiMode === "jsonp";
 }
 
+function shouldUseIframeTransport() {
+  if (!publicApiUrl) return false;
+  return publicApiMode === "iframe";
+}
+
+function loadIframeTransport(url) {
+  const requestId = `homisp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const requestUrl = new URL(url, window.location.href);
+  requestUrl.searchParams.set("transport", "iframe");
+  requestUrl.searchParams.set("request_id", requestId);
+
+  return new Promise((resolve, reject) => {
+    const frame = document.createElement("iframe");
+    frame.hidden = true;
+    frame.title = "Atualização de dados do dashboard";
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Tempo limite ao carregar dados externos"));
+    }, 60000);
+
+    function cleanup() {
+      window.clearTimeout(timeout);
+      window.removeEventListener("message", receive);
+      frame.remove();
+    }
+
+    function receive(event) {
+      const message = event.data;
+      if (event.source !== frame.contentWindow) return;
+      if (!message || message.type !== "homisp-dashboard-data" || message.requestId !== requestId) return;
+      cleanup();
+      if (message.error) reject(new Error(message.error));
+      else resolve(message.payload);
+    }
+
+    window.addEventListener("message", receive);
+    frame.src = requestUrl.toString();
+    document.body.append(frame);
+  });
+}
+
 function loadJsonp(url) {
   const callbackName = `homispDashboardCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const requestUrl = new URL(url, window.location.href);
@@ -163,6 +204,9 @@ async function requestDashboardDataWithRetry(maxAttempts = 2) {
 
 async function requestDashboardData(extra = {}) {
   const url = dashboardRequestUrl(extra);
+  if (shouldUseIframeTransport()) {
+    return loadIframeTransport(url);
+  }
   if (shouldUseJsonp()) {
     return loadJsonp(url);
   }
@@ -457,9 +501,11 @@ async function fetchDetail(path, params = {}) {
   const url = dashboardRequestUrl(params);
   const cacheKey = url.replace(/([?&])ts=\d+&?/, "$1").replace(/[?&]$/, "");
   if (detailRequestCache.has(cacheKey)) return detailRequestCache.get(cacheKey);
-  const request = (shouldUseJsonp()
-    ? await loadJsonp(url)
-    : await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } }).then((response) => {
+  const request = (shouldUseIframeTransport()
+    ? await loadIframeTransport(url)
+    : shouldUseJsonp()
+      ? await loadJsonp(url)
+      : await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } }).then((response) => {
         if (!response.ok) throw new Error("Não foi possível carregar os dados.");
         return response.json();
       }));
@@ -493,6 +539,17 @@ function resetPublicJourneyLists() {
   detailRequestCache.clear();
 }
 
+function recordTimestamp(item) {
+  const numeric = Number(item?.lastRecordedTimestamp);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const match = String(item?.lastRecordedAt || "").match(
+    /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/,
+  );
+  if (!match) return 0;
+  const [, day, month, year, hour, minute] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute)).getTime();
+}
+
 async function openSectorPatients(sector) {
   const dialog = qs("#sectorPatientsDialog");
   const list = qs("#sectorPatientsList");
@@ -524,7 +581,8 @@ async function openSectorPatients(sector) {
       publicMode ? (payload.total === 1 ? "jornada encontrada" : "jornadas encontradas") : (payload.total === 1 ? "paciente encontrado" : "pacientes encontrados")
     }`;
     feedback.textContent = payload.total ? "" : publicMode ? "Nenhuma jornada encontrada neste setor." : "Nenhum paciente encontrado neste setor.";
-    const items = publicMode ? payload.journeys || [] : payload.patients || [];
+    const items = [...(publicMode ? payload.journeys || [] : payload.patients || [])]
+      .sort((a, b) => recordTimestamp(b) - recordTimestamp(a));
     items.forEach((patient) => {
       const button = el("button", "patient-list-item");
       button.type = "button";
