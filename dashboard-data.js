@@ -1,5 +1,5 @@
 window.HOMISP_DASHBOARD_DATA = {
-  "generatedAt": "2026-09-29T10:18:20",
+  "generatedAt": "2026-09-29T10:20:55",
   "source": {
     "sheetId": "1eXlFlYblp2GOmqQbfwrQ7jA5UD8Us7KEScU7LpfX6FQ"
   },
@@ -23,11 +23,11 @@ window.HOMISP_DASHBOARD_DATA = {
     "Dados pessoais de pacientes nao foram exportados para este dashboard."
   ],
   "kpis": {
-    "totalPacientes": 8189,
+    "totalPacientes": 8190,
     "pacientesSemCpf": 667,
-    "totalAtendimentos": 12345,
-    "pacientesAtuais": 220,
-    "registros": 19270,
+    "totalAtendimentos": 12346,
+    "pacientesAtuais": 221,
+    "registros": 19271,
     "gravidades": 3752,
     "resolutividade": 1.0,
     "resolutividadeLabel": "100%",
@@ -49,8 +49,8 @@ window.HOMISP_DASHBOARD_DATA = {
     {
       "id": "recepcao_adulto",
       "label": "Aguardando triagem adulto",
-      "current": 87,
-      "visits": 12303,
+      "current": 88,
+      "visits": 12304,
       "avgLeadMinutes": 0.0,
       "totalLeadMinutes": 0,
       "isFinal": false
@@ -177,7 +177,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "sex": [
       {
         "label": "Feminino",
-        "value": 4632
+        "value": 4633
       },
       {
         "label": "Masculino",
@@ -191,7 +191,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "ageClass": [
       {
         "label": "Adulto",
-        "value": 8182
+        "value": 8183
       },
       {
         "label": "Infantil",
@@ -201,7 +201,7 @@ window.HOMISP_DASHBOARD_DATA = {
     "cities": [
       {
         "label": "Ceará-Mirim",
-        "value": 8021
+        "value": 8022
       },
       {
         "label": "Natal",
@@ -443,7 +443,7 @@ window.HOMISP_DASHBOARD_DATA = {
       },
       {
         "date": "2026-09-29",
-        "value": 110
+        "value": 111
       }
     ],
     "gravity": [
@@ -539,12 +539,12 @@ window.HOMISP_DASHBOARD_DATA = {
       }
     ],
     "registrationEfficiency": {
-      "totalEntries": 12187,
+      "totalEntries": 12188,
       "stages": [
         {
           "id": "entrada",
           "label": "Entrada registrada",
-          "patients": 12187
+          "patients": 12188
         },
         {
           "id": "triagem",
@@ -564,7 +564,7 @@ window.HOMISP_DASHBOARD_DATA = {
       ],
       "complete": 111,
       "closedIncomplete": 302,
-      "inProgress": 219,
+      "inProgress": 220,
       "hospitalized": 0,
       "overdue": 11555,
       "nursing": {

@@ -123,6 +123,7 @@ function loadIframeTransport(url) {
   const requestUrl = new URL(url, window.location.href);
   requestUrl.searchParams.set("transport", "iframe");
   requestUrl.searchParams.set("request_id", requestId);
+  requestUrl.searchParams.set("authuser", "0");
 
   return new Promise((resolve, reject) => {
     const frame = document.createElement("iframe");
