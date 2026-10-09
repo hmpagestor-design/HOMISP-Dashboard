@@ -60,7 +60,14 @@ const sectorLabels = {
   obito: "Óbito",
 };
 
-const hiddenDashboardSteps = new Set(["consultorio_adulto_4"]);
+const hiddenDashboardSteps = new Set([
+  "consultorio_adulto_4",
+  "recepcao_infantil",
+  "triagem_infantil",
+  "consultorio_pediatrico_1",
+  "consultorio_pediatrico_2",
+  "consultorio_pediatrico_3",
+]);
 
 function qs(selector) {
   return document.querySelector(selector);
