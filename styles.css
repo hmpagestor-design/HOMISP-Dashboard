@@ -520,6 +520,40 @@ h2 {
   margin-bottom: 16px;
 }
 
+.panel-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.registration-report-button {
+  min-height: 36px;
+  padding: 0 13px;
+  color: #ffffff;
+  background: var(--teal);
+  border: 1px solid var(--teal);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.registration-report-button:hover,
+.registration-report-button:focus-visible {
+  background: #0b746e;
+  border-color: #0b746e;
+  outline: 2px solid rgba(15, 138, 131, 0.2);
+  outline-offset: 2px;
+}
+
+.registration-report-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .metric-chip {
   display: inline-flex;
   align-items: center;
@@ -970,6 +1004,58 @@ h2 {
   background: rgba(18, 34, 46, 0.58);
 }
 
+.registration-report-dialog {
+  width: min(1180px, calc(100vw - 24px));
+  height: min(920px, calc(100vh - 24px));
+  max-height: calc(100vh - 24px);
+}
+
+.registration-report-dialog .dialog-shell {
+  height: 100%;
+  max-height: none;
+}
+
+.dialog-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dialog-command-button {
+  min-height: 40px;
+  padding: 0 14px;
+  color: #ffffff;
+  background: var(--teal);
+  border: 1px solid var(--teal);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.dialog-command-button:disabled {
+  color: var(--muted);
+  background: #e8eef4;
+  border-color: var(--line);
+  cursor: wait;
+}
+
+.registration-report-preview {
+  min-height: 0;
+  flex: 1;
+  padding: 14px;
+  background: #dfe7ee;
+}
+
+.registration-report-preview iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
 .dialog-shell {
   display: flex;
   max-height: min(820px, calc(100vh - 32px));
@@ -1376,6 +1462,20 @@ h2 {
     padding: 14px;
   }
 
+  .registration-efficiency-panel > .panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-heading-actions {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .registration-report-button {
+    width: 100%;
+  }
+
   .bar-row {
     grid-template-columns: 1fr minmax(46px, auto);
   }
@@ -1406,6 +1506,19 @@ h2 {
   .detail-dialog {
     width: calc(100vw - 16px);
     max-height: calc(100vh - 16px);
+  }
+
+  .registration-report-dialog {
+    height: calc(100vh - 16px);
+  }
+
+  .registration-report-dialog .dialog-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dialog-header-actions {
+    justify-content: space-between;
   }
 
   .dialog-header,

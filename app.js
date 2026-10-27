@@ -5,6 +5,7 @@ let lastOpenedSector = null;
 const detailRequestCache = new Map();
 let publicJourneyLists = null;
 let publicJourneyListsPromise = null;
+let currentDayReportData = null;
 
 const refreshIntervalMs = 30000;
 const isDevMode = new URLSearchParams(window.location.search).get("dev") === "1";
@@ -210,6 +211,10 @@ async function requestDashboardDataWithRetry(maxAttempts = 2) {
 
 async function requestDashboardData(extra = {}) {
   const url = dashboardRequestUrl(extra);
+  return requestDashboardDataFromUrl(url);
+}
+
+async function requestDashboardDataFromUrl(url) {
   if (shouldUseIframeTransport()) {
     try {
       return await loadIframeTransport(url);
@@ -229,6 +234,19 @@ async function requestDashboardData(extra = {}) {
     if (publicApiMode === "cors") throw error;
     return loadJsonp(url);
   }
+}
+
+function dashboardRequestUrlForPeriod(dateFrom, dateTo) {
+  const params = new URLSearchParams({
+    ts: String(Date.now()),
+    date_from: dateFrom,
+    date_to: dateTo,
+  });
+  if (!publicApiUrl) return `/api/dashboard-data?${params}`;
+
+  const url = new URL(publicApiUrl, window.location.href);
+  params.forEach((value, key) => url.searchParams.set(key, value));
+  return url.toString();
 }
 
 function updateFilterUrl() {
@@ -664,7 +682,14 @@ async function openPatientDetail(patientId) {
       wrapper.append(el("dt", "", label), el("dd", "", value || "Não informado"));
       facts.append(wrapper);
     });
-    const records = publicMode ? payload.records || [] : payload.journey || [];
+    const rawRecords = publicMode ? payload.records || [] : payload.journey || [];
+    const seenRecords = new Set();
+    const records = rawRecords.filter((record) => {
+      const key = `${record.spot || ""}|${record.recordedAt || ""}`;
+      if (seenRecords.has(key)) return false;
+      seenRecords.add(key);
+      return true;
+    });
     records.forEach((record) => {
       const item = el("li", "journey-item");
       item.append(el("span", "journey-dot"), el("strong", "", record.spot), el("time", "", record.recordedAt));
@@ -777,6 +802,244 @@ function renderRegistrationEfficiency() {
   });
 }
 
+function escapeReportHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function currentLocalDateValue() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function registrationReportAnalysis(reportData) {
+  const efficiency = reportData.charts?.registrationEfficiency || {};
+  const total = Number(efficiency.totalEntries) || 0;
+  const stages = Object.fromEntries((efficiency.stages || []).map((stage) => [stage.id, Number(stage.patients) || 0]));
+  const rate = (value) => (total ? (Number(value) || 0) / total : 0);
+  const nursing = efficiency.nursing || {};
+  const overdue = Number(efficiency.overdue) || 0;
+  const closedIncomplete = Number(efficiency.closedIncomplete) || 0;
+  const nursingWithoutPrevious = Number(nursing.withoutPreviousConsult) || 0;
+  const nursingWithoutContinuity = Number(nursing.withoutContinuity) || 0;
+  const findings = [];
+  const actions = [];
+
+  let level = "stable";
+  let label = "REGISTROS SOB MONITORAMENTO";
+  let summary = "Não foram identificadas pendências críticas nos registros consolidados até a emissão.";
+
+  if (!total) {
+    level = "neutral";
+    label = "SEM ENTRADAS REGISTRADAS";
+    summary = "Não há jornadas iniciadas no dia para avaliar neste momento.";
+  } else if (overdue > 0) {
+    level = "critical";
+    label = "AÇÃO NECESSÁRIA";
+    summary = `${formatNumber(overdue)} ${overdue === 1 ? "jornada permanece" : "jornadas permanecem"} sem desfecho registrado após 24 horas.`;
+  } else if (closedIncomplete > 0 || nursingWithoutPrevious > 0 || nursingWithoutContinuity > 0) {
+    level = "attention";
+    label = "PONTOS PARA CONFERÊNCIA";
+    summary = "Há lacunas de sequência ou encerramentos incompletos que merecem conferência operacional.";
+  }
+
+  if (total) {
+    findings.push(
+      `A triagem aparece em ${formatDecimal(rate(stages.triagem) * 100, 1)}% das jornadas iniciadas e o consultório em ${formatDecimal(rate(stages.consultorio) * 100, 1)}%.`,
+    );
+    findings.push(
+      `${formatNumber(stages.desfecho || 0)} de ${formatNumber(total)} jornadas já possuem desfecho registrado; as demais podem estar em andamento no momento da emissão.`,
+    );
+  }
+  if (closedIncomplete > 0) {
+    findings.push(`${formatNumber(closedIncomplete)} ${closedIncomplete === 1 ? "jornada encerrada não contém" : "jornadas encerradas não contêm"} todos os pontos obrigatórios.`);
+    actions.push("Conferir os encerramentos incompletos e identificar em qual ponto a leitura deixou de ser registrada.");
+  }
+  if (overdue > 0) {
+    actions.push("Revisar as jornadas acima de 24 horas sem internação ou desfecho e regularizar o registro correspondente.");
+  }
+  if (Number(nursing.passages) > 0) {
+    findings.push(
+      `A enfermagem possui ${formatNumber(nursing.passages)} passagens, com ${formatNumber(nursing.integrity)} sequências íntegras registradas.`,
+    );
+  }
+  if (nursingWithoutPrevious > 0) {
+    actions.push("Verificar passagens na enfermagem sem consultório anterior registrado.");
+  }
+  if (nursingWithoutContinuity > 0) {
+    actions.push("Verificar jornadas cuja última leitura permaneceu na enfermagem por mais de 24 horas.");
+  }
+  if (!actions.length && total) {
+    actions.push("Manter a conferência dos pontos obrigatórios ao longo do turno e revisar novamente antes do fechamento do dia.");
+  }
+
+  return { level, label, summary, findings, actions };
+}
+
+function buildRegistrationReportHtml(reportData, reportDate) {
+  const efficiency = reportData.charts?.registrationEfficiency || {};
+  const total = Number(efficiency.totalEntries) || 0;
+  const complete = Number(efficiency.complete) || 0;
+  const nursing = efficiency.nursing || {};
+  const analysis = registrationReportAnalysis(reportData);
+  const percent = (value, denominator = total) => `${formatDecimal(denominator ? ((Number(value) || 0) / denominator) * 100 : 0, 1)}%`;
+  const reportDateLabel = new Date(`${reportDate}T12:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const generatedAt = new Date(reportData.generatedAt || Date.now()).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const logoMisp = new URL("./assets/logo-misp.png", window.location.href).href;
+  const logoCity = new URL("./assets/logo-ceara-mirim.png", window.location.href).href;
+  const stageColors = { entrada: "#0f8a83", triagem: "#2166d1", consultorio: "#7c3aed", desfecho: "#1a8f45" };
+  const stageRows = (efficiency.stages || []).map((stage) => {
+    const coverage = total ? ((Number(stage.patients) || 0) / total) * 100 : 0;
+    return `<div class="coverage-row">
+      <div class="coverage-heading"><strong>${escapeReportHtml(stage.label)}</strong><span>${formatNumber(stage.patients)} de ${formatNumber(total)} · ${formatDecimal(coverage, 1)}%</span></div>
+      <div class="coverage-track"><span style="width:${Math.min(100, coverage)}%;background:${stageColors[stage.id] || "#64748b"}"></span></div>
+    </div>`;
+  }).join("");
+  const leadRows = (reportData.charts?.leadByStep || [])
+    .filter((item) => !hiddenDashboardSteps.has(item.id))
+    .sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
+    .slice(0, 8)
+    .map((item) => `<tr><td>${escapeReportHtml(displayLabel(item))}</td><td>${formatDecimal(item.value, 1)} min</td><td>${formatNumber(item.visits || 0)}</td></tr>`)
+    .join("");
+  const findings = analysis.findings.map((item) => `<li>${escapeReportHtml(item)}</li>`).join("");
+  const actions = analysis.actions.map((item) => `<li>${escapeReportHtml(item)}</li>`).join("");
+
+  return `<!doctype html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Relatório sobre registros - ${escapeReportHtml(reportDateLabel)}</title>
+    <style>
+      :root{--ink:#17202a;--muted:#64748b;--line:#d8e1ea;--teal:#0f8a83;--blue:#2166d1;--green:#1a8f45;--orange:#d97706;--red:#c93333;--purple:#7c3aed}
+      *{box-sizing:border-box} body{margin:0;color:var(--ink);background:#eef3f7;font-family:Arial,"Segoe UI",sans-serif;font-size:10pt;letter-spacing:0}
+      .report{width:min(210mm,100%);min-height:297mm;margin:0 auto;padding:12mm;background:#fff}
+      header{display:grid;grid-template-columns:54mm 1fr 27mm;align-items:center;gap:8mm;padding-bottom:7mm;border-bottom:2px solid var(--teal)}
+      header img{display:block;max-width:100%;max-height:24mm;object-fit:contain} header .city{justify-self:end}
+      .eyebrow{margin:0 0 2mm;color:var(--teal);font-size:8pt;font-weight:800;text-transform:uppercase}.title h1{margin:0;font-size:20pt;line-height:1.08}.title p{margin:2mm 0 0;color:var(--muted)}
+      .meta{display:flex;justify-content:space-between;gap:8mm;margin:5mm 0 6mm;color:var(--muted);font-size:8.5pt}.meta strong{color:var(--ink)}
+      .diagnosis{display:grid;grid-template-columns:44mm 1fr;gap:5mm;padding:5mm;border:1px solid var(--line);border-left:5px solid var(--teal);background:#f7fafc}.diagnosis.attention{border-left-color:var(--orange)}.diagnosis.critical{border-left-color:var(--red)}.diagnosis.neutral{border-left-color:var(--muted)}
+      .diagnosis-label{font-size:11pt;font-weight:900;color:var(--teal)}.diagnosis.attention .diagnosis-label{color:var(--orange)}.diagnosis.critical .diagnosis-label{color:var(--red)}.diagnosis p{margin:0;line-height:1.45}
+      .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:3mm;margin:6mm 0}.kpi{min-height:24mm;padding:4mm;border:1px solid var(--line);background:#fff}.kpi span{display:block;color:var(--muted);font-size:7.5pt;font-weight:700}.kpi strong{display:block;margin-top:3mm;font-size:17pt;line-height:1}.kpi small{display:block;margin-top:2mm;color:var(--muted)}
+      section{margin-top:7mm;break-inside:avoid}.section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:6mm;margin-bottom:4mm;padding-bottom:2mm;border-bottom:1px solid var(--line)}.section-heading h2{margin:0;font-size:13pt}.section-heading span{color:var(--muted);font-size:8pt}
+      .coverage{display:grid;gap:3.5mm}.coverage-heading{display:flex;justify-content:space-between;gap:5mm;margin-bottom:1.5mm}.coverage-heading span{color:var(--muted);font-size:8pt;font-weight:700}.coverage-track{height:4mm;overflow:hidden;background:#e7edf3}.coverage-track span{display:block;height:100%}
+      .two-columns{display:grid;grid-template-columns:1.18fr .82fr;gap:6mm}.fact-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:3mm}.fact{padding:4mm;border:1px solid var(--line);background:#f7fafc}.fact span{display:block;color:var(--muted);font-size:8pt;font-weight:700}.fact strong{display:block;margin-top:2mm;font-size:15pt}
+      table{width:100%;border-collapse:collapse}th,td{padding:2.5mm;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);background:#eef4f8;font-size:8pt;text-transform:uppercase}td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){text-align:right}
+      .notes{display:grid;grid-template-columns:1fr 1fr;gap:5mm}.note-box{padding:4mm;border:1px solid var(--line);background:#fff}.note-box h3{margin:0 0 3mm;font-size:10.5pt}.note-box ul{margin:0;padding-left:5mm}.note-box li{margin:0 0 2mm;line-height:1.4}
+      footer{margin-top:8mm;padding-top:3mm;border-top:1px solid var(--line);color:var(--muted);font-size:7.5pt;line-height:1.4}
+      @page{size:A4 portrait;margin:0}@media print{body{background:#fff}.report{width:210mm;min-height:297mm;margin:0;padding:12mm}.page-break{break-before:page}}
+      @media(max-width:760px){.report{padding:18px}.kpis{grid-template-columns:repeat(2,1fr)}.two-columns,.notes,.diagnosis,header{grid-template-columns:1fr}.meta{flex-direction:column}.city{display:none}}
+    </style>
+  </head>
+  <body>
+    <main class="report">
+      <header><img src="${escapeReportHtml(logoMisp)}" alt="MISP UFRN"><div class="title"><p class="eyebrow">Qualidade do registro</p><h1>Relatório sobre registros da jornada</h1><p>Situação das leituras realizadas nos pontos do atendimento</p></div><img class="city" src="${escapeReportHtml(logoCity)}" alt="Prefeitura de Ceará-Mirim"></header>
+      <div class="meta"><span><strong>Período:</strong> ${escapeReportHtml(reportDateLabel)}</span><span><strong>Emitido em:</strong> ${escapeReportHtml(generatedAt)}</span></div>
+      <div class="diagnosis ${analysis.level}"><div class="diagnosis-label">${escapeReportHtml(analysis.label)}</div><p>${escapeReportHtml(analysis.summary)}</p></div>
+      <div class="kpis">
+        <div class="kpi"><span>Entradas registradas</span><strong>${formatNumber(total)}</strong><small>Base do relatório</small></div>
+        <div class="kpi"><span>Jornadas completas</span><strong>${percent(complete)}</strong><small>${formatNumber(complete)} registros completos</small></div>
+        <div class="kpi"><span>Em andamento</span><strong>${formatNumber(efficiency.inProgress || 0)}</strong><small>Sem penalização</small></div>
+        <div class="kpi"><span>Pendentes acima de 24h</span><strong>${formatNumber(efficiency.overdue || 0)}</strong><small>Sem internação ou desfecho</small></div>
+        <div class="kpi"><span>Encerradas incompletas</span><strong>${formatNumber(efficiency.closedIncomplete || 0)}</strong><small>Com pontos obrigatórios ausentes</small></div>
+      </div>
+
+      <section><div class="section-heading"><h2>Cobertura dos pontos obrigatórios</h2><span>Percentuais sobre as entradas do dia</span></div><div class="coverage">${stageRows || "<p>Sem dados no período.</p>"}</div></section>
+
+      <section class="two-columns">
+        <div><div class="section-heading"><h2>Ciclo temporal dos registros</h2><span>Tempo entre as leituras</span></div>
+          <div class="fact-grid"><div class="fact"><span>Permanência média até o desfecho</span><strong>${escapeReportHtml(reportData.kpis?.permanenciaMediaLabel || "00:00")}</strong></div><div class="fact"><span>Maior tempo médio entre pontos</span><strong>${escapeReportHtml(reportData.kpis?.gargaloAtualLabel || "Sem dados")}</strong><small>${escapeReportHtml(reportData.kpis?.gargaloAtualTempoLabel || "0 min")}</small></div></div>
+          <table><thead><tr><th>Ponto registrado</th><th>Tempo médio</th><th>Leituras</th></tr></thead><tbody>${leadRows || "<tr><td colspan=\"3\">Sem intervalos calculados.</td></tr>"}</tbody></table>
+        </div>
+        <div><div class="section-heading"><h2>Integridade da enfermagem</h2><span>Sequência registrada</span></div>
+          <div class="fact-grid"><div class="fact"><span>Fluxo íntegro</span><strong>${percent(nursing.integrity || 0, nursing.passages || 0)}</strong></div><div class="fact"><span>Passagens</span><strong>${formatNumber(nursing.passages || 0)}</strong></div><div class="fact"><span>Sem consultório anterior</span><strong>${formatNumber(nursing.withoutPreviousConsult || 0)}</strong></div><div class="fact"><span>Sem continuidade acima de 24h</span><strong>${formatNumber(nursing.withoutContinuity || 0)}</strong></div></div>
+        </div>
+      </section>
+
+      <section><div class="section-heading"><h2>Leitura rápida da situação</h2><span>Análise automática para apoio à conferência</span></div><div class="notes"><div class="note-box"><h3>O que os registros mostram</h3><ul>${findings || "<li>Sem dados suficientes para análise.</li>"}</ul></div><div class="note-box"><h3>Ações sugeridas</h3><ul>${actions || "<li>Aguardar novas entradas e emitir o relatório novamente.</li>"}</ul></div></div></section>
+      <footer>Este relatório avalia somente a presença, a sequência e os intervalos dos registros da jornada. Ele não substitui prontuário, auditoria clínica ou avaliação assistencial e não contém dados pessoais dos pacientes.</footer>
+    </main>
+  </body></html>`;
+}
+
+async function generateRegistrationReport() {
+  const button = qs("#registrationReportButton");
+  const dialog = qs("#registrationReportDialog");
+  const frame = qs("#registrationReportFrame");
+  const printButton = qs("#registrationReportPrint");
+  const summary = qs("#registrationReportSummary");
+  if (!dialog || !frame || !printButton || !summary) return;
+
+  frame.srcdoc = "<!doctype html><meta charset=\"utf-8\"><body style=\"font-family:Arial;padding:32px\"><h1>Gerando relatório...</h1><p>Consultando os registros do dia atual.</p></body>";
+  printButton.disabled = true;
+  summary.textContent = "Consultando os registros do dia atual.";
+  if (!dialog.open) dialog.showModal();
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Gerando relatório...";
+  }
+
+  const reportDate = currentLocalDateValue();
+  const url = dashboardRequestUrlForPeriod(reportDate, reportDate);
+  let lastError = null;
+  try {
+    let reportData = null;
+    for (let attempt = 0; attempt < 2 && !reportData; attempt += 1) {
+      try {
+        const candidate = await requestDashboardDataFromUrl(url);
+        const filters = candidate.meta?.filters || {};
+        if (filters.dateFrom !== reportDate || filters.dateTo !== reportDate || !candidate.meta?.isSingleDay) {
+          throw new Error("A fonte não retornou a consolidação do dia atual");
+        }
+        reportData = candidate;
+      } catch (error) {
+        lastError = error;
+        if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 900));
+      }
+    }
+    if (!reportData && currentDayReportData) reportData = currentDayReportData;
+    if (!reportData) throw lastError || new Error("Não foi possível consultar os registros");
+    frame.srcdoc = buildRegistrationReportHtml(reportData, reportDate);
+    printButton.disabled = false;
+    summary.textContent = "Visão consolidada das leituras realizadas no dia atual.";
+  } catch (error) {
+    frame.srcdoc = `<!doctype html><meta charset="utf-8"><title>Falha ao gerar relatório</title><body style="font-family:Arial;padding:32px"><h1>Não foi possível gerar o relatório</h1><p>${escapeReportHtml(error.message || "Falha ao consultar os dados do dia.")}</p></body>`;
+    summary.textContent = "Falha ao consultar os dados do dia atual.";
+    setRefreshStatus("error", "Falha ao gerar relatório sobre registros");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Relatório sobre registros";
+    }
+  }
+}
+
+function setupRegistrationReport() {
+  qs("#registrationReportButton")?.addEventListener("click", generateRegistrationReport);
+  qs("#registrationReportPrint")?.addEventListener("click", () => {
+    const frame = qs("#registrationReportFrame");
+    if (frame?.contentWindow) frame.contentWindow.print();
+  });
+}
+
 function renderQuality() {
   const list = qs("#qualityList");
   const items = [
@@ -866,6 +1129,14 @@ function formatClock(value) {
 
 function renderDashboard(nextData = data) {
   data = nextData;
+  const reportDate = currentLocalDateValue();
+  if (
+    data.meta?.filters?.dateFrom === reportDate
+    && data.meta?.filters?.dateTo === reportDate
+    && data.meta?.isSingleDay
+  ) {
+    currentDayReportData = data;
+  }
   const isFiltered = Boolean(data.meta?.isFiltered);
   const isSingleDay = Boolean(data.meta?.isSingleDay);
   renderKpis();
@@ -974,6 +1245,7 @@ function init() {
   if (publicApiUrl) setRefreshStatus("snapshot", "Atualizando dados...");
   setupTabs();
   setupDetailDialogs();
+  setupRegistrationReport();
   startAutoRefresh();
 }
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Jornada do Paciente | MISP Ceará-Mirim</title>
-    <link rel="stylesheet" href="./styles.css?v=20260929103113" />
+    <link rel="stylesheet" href="./styles.css?v=20261027-relatorio-registros" />
   </head>
   <body>
     <div class="shell">
@@ -196,7 +196,12 @@
                   <p class="eyebrow">Qualidade do registro</p>
                   <h2>Completude da jornada</h2>
                 </div>
-                <span id="efficiencyPeriodLabel" class="panel-badge">Período selecionado</span>
+                <div class="panel-heading-actions">
+                  <span id="efficiencyPeriodLabel" class="panel-badge">Período selecionado</span>
+                  <button class="registration-report-button" id="registrationReportButton" type="button">
+                    Relatório sobre registros
+                  </button>
+                </div>
               </div>
               <div class="registration-efficiency-layout">
                 <section class="mandatory-flow" aria-labelledby="mandatoryFlowTitle">
@@ -297,8 +302,27 @@
       </div>
     </dialog>
 
-    <script src="./dashboard-data.js?v=20260929103113"></script>
-    <script src="./dashboard-config.js?v=20260929103113"></script>
-    <script src="./app.js?v=20261009-sem-pediatria"></script>
+    <dialog class="detail-dialog registration-report-dialog" id="registrationReportDialog" aria-labelledby="registrationReportTitle">
+      <div class="dialog-shell">
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">Qualidade do registro</p>
+            <h2 id="registrationReportTitle">Relatório sobre registros da jornada</h2>
+            <p class="dialog-summary" id="registrationReportSummary">Preparando a visão do dia atual.</p>
+          </div>
+          <div class="dialog-header-actions">
+            <button class="dialog-command-button" id="registrationReportPrint" type="button" disabled>Salvar em PDF</button>
+            <button class="icon-button" type="button" data-close-dialog="registrationReportDialog" aria-label="Fechar">×</button>
+          </div>
+        </header>
+        <div class="registration-report-preview">
+          <iframe id="registrationReportFrame" title="Prévia do relatório sobre registros"></iframe>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./dashboard-data.js?v=20261027-relatorio-registros"></script>
+    <script src="./dashboard-config.js?v=20261027-relatorio-registros"></script>
+    <script src="./app.js?v=20261027-relatorio-registros"></script>
   </body>
 </html>
