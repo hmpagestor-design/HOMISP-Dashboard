@@ -820,10 +820,78 @@ function currentLocalDateValue() {
   ].join("-");
 }
 
-function registrationReportAnalysis(reportData) {
-  const efficiency = reportData.charts?.registrationEfficiency || {};
+function offsetDateValue(value, days) {
+  const date = new Date(`${value}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function registrationSnapshot(source) {
+  const efficiency = source?.charts?.registrationEfficiency || {};
   const total = Number(efficiency.totalEntries) || 0;
   const stages = Object.fromEntries((efficiency.stages || []).map((stage) => [stage.id, Number(stage.patients) || 0]));
+  const stageRates = Object.fromEntries(
+    Object.entries(stages).map(([id, value]) => [id, total ? value / total : 0]),
+  );
+  const comparableRates = [stageRates.triagem, stageRates.consultorio, stageRates.desfecho].filter(Number.isFinite);
+  const coverageIndex = comparableRates.length
+    ? comparableRates.reduce((sum, value) => sum + value, 0) / comparableRates.length
+    : 0;
+  const nursing = efficiency.nursing || {};
+  const nursingPassages = Number(nursing.passages) || 0;
+
+  return {
+    source,
+    efficiency,
+    total,
+    stages,
+    stageRates,
+    coverageIndex,
+    completeRate: total ? (Number(efficiency.complete) || 0) / total : 0,
+    nursingIntegrityRate: nursingPassages ? (Number(nursing.integrity) || 0) / nursingPassages : 0,
+  };
+}
+
+function registrationReportComparison(reportData, context = {}) {
+  const current = registrationSnapshot(reportData);
+  const previous = context.previousData ? registrationSnapshot(context.previousData) : null;
+  const weekly = context.weeklyData ? registrationSnapshot(context.weeklyData) : null;
+  const delta = (baseline, metric = "coverageIndex") => (
+    baseline?.total ? (current[metric] - baseline[metric]) * 100 : null
+  );
+
+  return {
+    current,
+    previous,
+    weekly,
+    dailyDelta: delta(previous),
+    weeklyDelta: delta(weekly),
+  };
+}
+
+function signedPoints(value) {
+  if (!Number.isFinite(value)) return "Sem base";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatDecimal(value, 1)} p.p`;
+}
+
+function trendDirection(value, threshold = 2) {
+  if (!Number.isFinite(value)) return "neutral";
+  if (value >= threshold) return "up";
+  if (value <= -threshold) return "down";
+  return "flat";
+}
+
+function registrationReportAnalysis(reportData, context = {}) {
+  const comparison = registrationReportComparison(reportData, context);
+  const { current, previous, weekly, dailyDelta, weeklyDelta } = comparison;
+  const efficiency = current.efficiency;
+  const total = current.total;
+  const stages = current.stages;
   const rate = (value) => (total ? (Number(value) || 0) / total : 0);
   const nursing = efficiency.nursing || {};
   const overdue = Number(efficiency.overdue) || 0;
@@ -835,7 +903,7 @@ function registrationReportAnalysis(reportData) {
 
   let level = "stable";
   let label = "REGISTROS SOB MONITORAMENTO";
-  let summary = "Não foram identificadas pendências críticas nos registros consolidados até a emissão.";
+  let summary = "A cobertura dos pontos está estável nas bases comparáveis.";
 
   if (!total) {
     level = "neutral";
@@ -845,19 +913,55 @@ function registrationReportAnalysis(reportData) {
     level = "critical";
     label = "AÇÃO NECESSÁRIA";
     summary = `${formatNumber(overdue)} ${overdue === 1 ? "jornada permanece" : "jornadas permanecem"} sem desfecho registrado após 24 horas.`;
+  } else if (trendDirection(dailyDelta) === "down" || trendDirection(weeklyDelta) === "down") {
+    level = "attention";
+    label = "QUEDA NA COBERTURA";
+    summary = `O índice de cobertura está ${signedPoints(dailyDelta)} em relação a ontem e ${signedPoints(weeklyDelta)} frente aos sete dias anteriores.`;
+  } else if (trendDirection(dailyDelta) === "up" && trendDirection(weeklyDelta) === "up") {
+    label = "TENDÊNCIA POSITIVA";
+    summary = `O índice de cobertura avançou ${signedPoints(dailyDelta)} em relação a ontem e ${signedPoints(weeklyDelta)} frente aos sete dias anteriores.`;
   } else if (closedIncomplete > 0 || nursingWithoutPrevious > 0 || nursingWithoutContinuity > 0) {
     level = "attention";
     label = "PONTOS PARA CONFERÊNCIA";
-    summary = "Há lacunas de sequência ou encerramentos incompletos que merecem conferência operacional.";
+    summary = `A cobertura está ${signedPoints(dailyDelta)} em relação a ontem e ${signedPoints(weeklyDelta)} frente aos sete dias anteriores, mas ainda há lacunas operacionais.`;
   }
 
   if (total) {
-    findings.push(
-      `A triagem aparece em ${formatDecimal(rate(stages.triagem) * 100, 1)}% das jornadas iniciadas e o consultório em ${formatDecimal(rate(stages.consultorio) * 100, 1)}%.`,
-    );
-    findings.push(
-      `${formatNumber(stages.desfecho || 0)} de ${formatNumber(total)} jornadas já possuem desfecho registrado; as demais podem estar em andamento no momento da emissão.`,
-    );
+    const comparableStages = [
+      ["triagem", "triagem"],
+      ["consultorio", "consultório"],
+      ["desfecho", "desfecho"],
+    ];
+    const dailyStageDeltas = comparableStages
+      .filter(([id]) => previous?.total)
+      .map(([id, labelText]) => ({
+        id,
+        label: labelText,
+        value: ((current.stageRates[id] || 0) - (previous.stageRates[id] || 0)) * 100,
+      }))
+      .sort((a, b) => a.value - b.value);
+    const weeklyStageDeltas = comparableStages
+      .filter(([id]) => weekly?.total)
+      .map(([id, labelText]) => ({
+        id,
+        label: labelText,
+        value: ((current.stageRates[id] || 0) - (weekly.stageRates[id] || 0)) * 100,
+      }))
+      .sort((a, b) => a.value - b.value);
+
+    findings.push(`O índice médio de cobertura dos pontos está em ${formatDecimal(current.coverageIndex * 100, 1)}%.`);
+    if (dailyStageDeltas.length) {
+      const weakest = dailyStageDeltas[0];
+      const strongest = dailyStageDeltas[dailyStageDeltas.length - 1];
+      const strongestText = strongest.value >= 0 ? "o maior avanço" : "o menor recuo";
+      const weakestText = weakest.value < 0 ? "o maior recuo" : "o menor avanço";
+      findings.push(`Contra ontem, ${strongestText} está em ${strongest.label} (${signedPoints(strongest.value)}) e ${weakestText} em ${weakest.label} (${signedPoints(weakest.value)}).`);
+    }
+    if (weeklyStageDeltas.length) {
+      const weakest = weeklyStageDeltas[0];
+      findings.push(`Na comparação semanal, o ponto mais distante da referência é ${weakest.label}, com ${signedPoints(weakest.value)}.`);
+    }
+    findings.push(`${formatNumber(stages.desfecho || 0)} de ${formatNumber(total)} jornadas já possuem desfecho registrado; as demais podem estar em andamento no momento da emissão.`);
   }
   if (closedIncomplete > 0) {
     findings.push(`${formatNumber(closedIncomplete)} ${closedIncomplete === 1 ? "jornada encerrada não contém" : "jornadas encerradas não contêm"} todos os pontos obrigatórios.`);
@@ -877,19 +981,26 @@ function registrationReportAnalysis(reportData) {
   if (nursingWithoutContinuity > 0) {
     actions.push("Verificar jornadas cuja última leitura permaneceu na enfermagem por mais de 24 horas.");
   }
+  if (Number.isFinite(dailyDelta) && dailyDelta <= -2) {
+    actions.push("Priorizar o ponto com maior queda frente a ontem e confirmar se os telefones e a rotina de leitura estão ativos no setor.");
+  }
+  if (Number.isFinite(weeklyDelta) && weeklyDelta <= -2) {
+    actions.push("Acompanhar a cobertura ao longo do turno, pois o resultado atual está abaixo da referência dos sete dias anteriores.");
+  }
   if (!actions.length && total) {
     actions.push("Manter a conferência dos pontos obrigatórios ao longo do turno e revisar novamente antes do fechamento do dia.");
   }
 
-  return { level, label, summary, findings, actions };
+  return { level, label, summary, findings, actions, comparison };
 }
 
-function buildRegistrationReportHtml(reportData, reportDate) {
+function buildRegistrationReportHtml(reportData, reportDate, context = {}) {
   const efficiency = reportData.charts?.registrationEfficiency || {};
   const total = Number(efficiency.totalEntries) || 0;
   const complete = Number(efficiency.complete) || 0;
   const nursing = efficiency.nursing || {};
-  const analysis = registrationReportAnalysis(reportData);
+  const analysis = registrationReportAnalysis(reportData, context);
+  const { current, previous, weekly, dailyDelta, weeklyDelta } = analysis.comparison;
   const percent = (value, denominator = total) => `${formatDecimal(denominator ? ((Number(value) || 0) / denominator) * 100 : 0, 1)}%`;
   const reportDateLabel = new Date(`${reportDate}T12:00:00`).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -913,6 +1024,23 @@ function buildRegistrationReportHtml(reportData, reportDate) {
       <div class="coverage-track"><span style="width:${Math.min(100, coverage)}%;background:${stageColors[stage.id] || "#64748b"}"></span></div>
     </div>`;
   }).join("");
+  const comparisonRows = (efficiency.stages || [])
+    .filter((stage) => stage.id !== "entrada")
+    .map((stage) => {
+      const todayRate = current.stageRates[stage.id] || 0;
+      const previousRate = previous?.stageRates?.[stage.id];
+      const weeklyRate = weekly?.stageRates?.[stage.id];
+      const dailyStageDelta = Number.isFinite(previousRate) ? (todayRate - previousRate) * 100 : null;
+      const weeklyStageDelta = Number.isFinite(weeklyRate) ? (todayRate - weeklyRate) * 100 : null;
+      const baselineCell = (snapshot, baselineRate) => {
+        if (!snapshot?.total || !Number.isFinite(baselineRate)) return '<span class="muted">Sem base</span>';
+        const expected = Math.round(baselineRate * current.total);
+        return `<strong>${formatDecimal(baselineRate * 100, 1)}%</strong><small>≈ ${formatNumber(expected)} no volume de hoje</small>`;
+      };
+      const deltaCell = (value) => `<span class="trend ${trendDirection(value)}">${signedPoints(value)}</span>`;
+      return `<tr><td><strong>${escapeReportHtml(stage.label)}</strong><small>${formatNumber(stage.patients)} leituras hoje</small></td><td><strong>${formatDecimal(todayRate * 100, 1)}%</strong></td><td>${baselineCell(previous, previousRate)}</td><td>${deltaCell(dailyStageDelta)}</td><td>${baselineCell(weekly, weeklyRate)}</td><td>${deltaCell(weeklyStageDelta)}</td></tr>`;
+    })
+    .join("");
   const leadRows = (reportData.charts?.leadByStep || [])
     .filter((item) => !hiddenDashboardSteps.has(item.id))
     .sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0))
@@ -943,10 +1071,11 @@ function buildRegistrationReportHtml(reportData, reportDate) {
       .coverage{display:grid;gap:3.5mm}.coverage-heading{display:flex;justify-content:space-between;gap:5mm;margin-bottom:1.5mm}.coverage-heading span{color:var(--muted);font-size:8pt;font-weight:700}.coverage-track{height:4mm;overflow:hidden;background:#e7edf3}.coverage-track span{display:block;height:100%}
       .two-columns{display:grid;grid-template-columns:1.18fr .82fr;gap:6mm}.fact-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:3mm}.fact{padding:4mm;border:1px solid var(--line);background:#f7fafc}.fact span{display:block;color:var(--muted);font-size:8pt;font-weight:700}.fact strong{display:block;margin-top:2mm;font-size:15pt}
       table{width:100%;border-collapse:collapse}th,td{padding:2.5mm;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);background:#eef4f8;font-size:8pt;text-transform:uppercase}td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){text-align:right}
+      .trend-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin:4mm 0 5mm}.trend-card{padding:4mm;border:1px solid var(--line);background:#f7fafc}.trend-card span,.trend-card small{display:block;color:var(--muted);font-size:7.5pt}.trend-card strong{display:block;margin:2mm 0;font-size:16pt}.trend{display:inline-block;padding:1.5mm 2mm;border-radius:3px;font-weight:900;white-space:nowrap}.trend.up{color:#0d7a3d;background:#e7f6ed}.trend.down{color:#b4232a;background:#fdecee}.trend.flat{color:#475569;background:#edf2f6}.trend.neutral{color:#64748b;background:#edf2f6}.comparison-table td{vertical-align:top}.comparison-table td:first-child small,.comparison-table td:nth-child(3) small,.comparison-table td:nth-child(5) small{display:block;margin-top:1mm;color:var(--muted);font-size:7pt}.comparison-table td:nth-child(n+2),.comparison-table th:nth-child(n+2){text-align:center}.muted{color:var(--muted)}
       .notes{display:grid;grid-template-columns:1fr 1fr;gap:5mm}.note-box{padding:4mm;border:1px solid var(--line);background:#fff}.note-box h3{margin:0 0 3mm;font-size:10.5pt}.note-box ul{margin:0;padding-left:5mm}.note-box li{margin:0 0 2mm;line-height:1.4}
       footer{margin-top:8mm;padding-top:3mm;border-top:1px solid var(--line);color:var(--muted);font-size:7.5pt;line-height:1.4}
-      @page{size:A4 portrait;margin:0}@media print{body{background:#fff}.report{width:210mm;min-height:297mm;margin:0;padding:12mm}.page-break{break-before:page}}
-      @media(max-width:760px){.report{padding:18px}.kpis{grid-template-columns:repeat(2,1fr)}.two-columns,.notes,.diagnosis,header{grid-template-columns:1fr}.meta{flex-direction:column}.city{display:none}}
+      @page{size:A4 portrait;margin:0}@media print{body{background:#fff}.report{width:210mm;min-height:297mm;margin:0;padding:12mm}.page-break{break-before:page;padding-top:4mm}}
+      @media(max-width:760px){.report{padding:18px}.kpis,.trend-kpis{grid-template-columns:repeat(2,1fr)}.two-columns,.notes,.diagnosis,header{grid-template-columns:1fr}.meta{flex-direction:column}.city{display:none}.comparison-table{font-size:8pt}}
     </style>
   </head>
   <body>
@@ -962,6 +1091,18 @@ function buildRegistrationReportHtml(reportData, reportDate) {
         <div class="kpi"><span>Encerradas incompletas</span><strong>${formatNumber(efficiency.closedIncomplete || 0)}</strong><small>Com pontos obrigatórios ausentes</small></div>
       </div>
 
+      <section><div class="section-heading"><h2>Comparação ajustada pelo volume</h2><span>Taxas por entrada registrada</span></div>
+        <div class="trend-kpis">
+          <div class="trend-card"><span>Índice de cobertura hoje</span><strong>${formatDecimal(current.coverageIndex * 100, 1)}%</strong><small>Média de triagem, consultório e desfecho</small></div>
+          <div class="trend-card"><span>Variação contra ontem</span><strong class="trend ${trendDirection(dailyDelta)}">${signedPoints(dailyDelta)}</strong><small>${escapeReportHtml(context.previousDateLabel || "Dia anterior")}</small></div>
+          <div class="trend-card"><span>Variação contra 7 dias</span><strong class="trend ${trendDirection(weeklyDelta)}">${signedPoints(weeklyDelta)}</strong><small>${escapeReportHtml(context.weeklyPeriodLabel || "Sete dias anteriores")}</small></div>
+        </div>
+        <table class="comparison-table"><thead><tr><th>Ponto</th><th>Hoje</th><th>Ontem</th><th>Variação</th><th>7 dias</th><th>Variação</th></tr></thead><tbody>${comparisonRows || '<tr><td colspan="6">Sem dados comparáveis.</td></tr>'}</tbody></table>
+      </section>
+
+      <section><div class="section-heading"><h2>Leitura comparativa</h2><span>Ganhos, perdas e ações sugeridas</span></div><div class="notes"><div class="note-box"><h3>O que mudou</h3><ul>${findings || "<li>Sem dados suficientes para análise.</li>"}</ul></div><div class="note-box"><h3>Ações sugeridas</h3><ul>${actions || "<li>Aguardar novas entradas e emitir o relatório novamente.</li>"}</ul></div></div></section>
+
+      <div class="page-break"></div>
       <section><div class="section-heading"><h2>Cobertura dos pontos obrigatórios</h2><span>Percentuais sobre as entradas do dia</span></div><div class="coverage">${stageRows || "<p>Sem dados no período.</p>"}</div></section>
 
       <section class="two-columns">
@@ -974,10 +1115,38 @@ function buildRegistrationReportHtml(reportData, reportDate) {
         </div>
       </section>
 
-      <section><div class="section-heading"><h2>Leitura rápida da situação</h2><span>Análise automática para apoio à conferência</span></div><div class="notes"><div class="note-box"><h3>O que os registros mostram</h3><ul>${findings || "<li>Sem dados suficientes para análise.</li>"}</ul></div><div class="note-box"><h3>Ações sugeridas</h3><ul>${actions || "<li>Aguardar novas entradas e emitir o relatório novamente.</li>"}</ul></div></div></section>
-      <footer>Este relatório avalia somente a presença, a sequência e os intervalos dos registros da jornada. Ele não substitui prontuário, auditoria clínica ou avaliação assistencial e não contém dados pessoais dos pacientes.</footer>
+      <footer>Este relatório avalia somente a presença, a sequência e os intervalos dos registros da jornada. As comparações são normalizadas pela quantidade de entradas: as taxas de ontem e dos sete dias anteriores são projetadas para o volume registrado hoje. Isso reduz o efeito de dias mais cheios, mas não substitui uma comparação minuto a minuto. O documento não substitui prontuário, auditoria clínica ou avaliação assistencial e não contém dados pessoais dos pacientes.</footer>
     </main>
   </body></html>`;
+}
+
+async function requestReportPeriod(dateFrom, dateTo, options = {}) {
+  const url = dashboardRequestUrlForPeriod(dateFrom, dateTo);
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const candidate = await requestDashboardDataFromUrl(url);
+      const filters = candidate.meta?.filters || {};
+      const sourceMode = String(candidate.meta?.sourceMode || "").toLowerCase();
+      if (sourceMode.includes("snapshot")) {
+        throw new Error("A comparação histórica não pode usar a base local geral");
+      }
+      if (filters.dateFrom !== dateFrom || filters.dateTo !== dateTo) {
+        throw new Error("A fonte retornou um período diferente do solicitado");
+      }
+      if (options.singleDay && !candidate.meta?.isSingleDay) {
+        throw new Error("A fonte não retornou uma consolidação diária");
+      }
+      return candidate;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 900));
+    }
+  }
+
+  if (options.optional) return null;
+  throw lastError || new Error("Não foi possível consultar os registros");
 }
 
 async function generateRegistrationReport() {
@@ -988,9 +1157,9 @@ async function generateRegistrationReport() {
   const summary = qs("#registrationReportSummary");
   if (!dialog || !frame || !printButton || !summary) return;
 
-  frame.srcdoc = "<!doctype html><meta charset=\"utf-8\"><body style=\"font-family:Arial;padding:32px\"><h1>Gerando relatório...</h1><p>Consultando os registros do dia atual.</p></body>";
+  frame.srcdoc = "<!doctype html><meta charset=\"utf-8\"><body style=\"font-family:Arial;padding:32px\"><h1>Gerando relatório...</h1><p>Consultando hoje, ontem e os sete dias anteriores.</p></body>";
   printButton.disabled = true;
-  summary.textContent = "Consultando os registros do dia atual.";
+  summary.textContent = "Consultando as bases diária e semanal.";
   if (!dialog.open) dialog.showModal();
   if (button) {
     button.disabled = true;
@@ -998,28 +1167,30 @@ async function generateRegistrationReport() {
   }
 
   const reportDate = currentLocalDateValue();
-  const url = dashboardRequestUrlForPeriod(reportDate, reportDate);
-  let lastError = null;
+  const previousDate = offsetDateValue(reportDate, -1);
+  const weeklyStart = offsetDateValue(reportDate, -7);
+  const weeklyEnd = previousDate;
   try {
-    let reportData = null;
-    for (let attempt = 0; attempt < 2 && !reportData; attempt += 1) {
-      try {
-        const candidate = await requestDashboardDataFromUrl(url);
-        const filters = candidate.meta?.filters || {};
-        if (filters.dateFrom !== reportDate || filters.dateTo !== reportDate || !candidate.meta?.isSingleDay) {
-          throw new Error("A fonte não retornou a consolidação do dia atual");
-        }
-        reportData = candidate;
-      } catch (error) {
-        lastError = error;
-        if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 900));
-      }
-    }
+    const [currentResult, previousData, weeklyData] = await Promise.all([
+      currentDayReportData
+        ? Promise.resolve(currentDayReportData)
+        : requestReportPeriod(reportDate, reportDate, { singleDay: true }).catch(() => null),
+      requestReportPeriod(previousDate, previousDate, { singleDay: true, optional: true }),
+      requestReportPeriod(weeklyStart, weeklyEnd, { optional: true }),
+    ]);
+    let reportData = currentResult;
     if (!reportData && currentDayReportData) reportData = currentDayReportData;
-    if (!reportData) throw lastError || new Error("Não foi possível consultar os registros");
-    frame.srcdoc = buildRegistrationReportHtml(reportData, reportDate);
+    if (!reportData) throw new Error("Não foi possível consultar os registros do dia atual");
+
+    const dateLabel = (value) => new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR");
+    frame.srcdoc = buildRegistrationReportHtml(reportData, reportDate, {
+      previousData,
+      weeklyData,
+      previousDateLabel: dateLabel(previousDate),
+      weeklyPeriodLabel: `${dateLabel(weeklyStart)} a ${dateLabel(weeklyEnd)}`,
+    });
     printButton.disabled = false;
-    summary.textContent = "Visão consolidada das leituras realizadas no dia atual.";
+    summary.textContent = "Comparação de hoje com ontem e os sete dias anteriores.";
   } catch (error) {
     frame.srcdoc = `<!doctype html><meta charset="utf-8"><title>Falha ao gerar relatório</title><body style="font-family:Arial;padding:32px"><h1>Não foi possível gerar o relatório</h1><p>${escapeReportHtml(error.message || "Falha ao consultar os dados do dia.")}</p></body>`;
     summary.textContent = "Falha ao consultar os dados do dia atual.";
